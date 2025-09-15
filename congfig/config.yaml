@@ -1,0 +1,31 @@
+# config.yaml
+milvus:
+  host: "192.168.1.102"
+  port: 19530                # 整型端口
+  collection_name: "company_news_final"
+  embedding_dim: 1536        # 向量维度
+  search_params:
+    metric_type: "COSINE"    # 必须与索引类型一致
+    nprobe: 128              # 搜索参数
+    limit: 10                # 返回结果数
+
+mysql:
+  host: "192.168.1.101"
+  port: 13306                # 整型端口
+  user: "news_user"
+  password: "km101"          # 生产环境建议使用环境变量
+  database: "stock_news"     # 数据库名称
+
+qwen:
+  api_key: "sk-48d14c2089104df1"  # 敏感信息建议加密
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  embedding_model: "text-embedding-v1"
+  chat_model: "qwen-plus"
+
+generation:
+  temperature: 0.3          # 生成温度系数
+  top_p: 0.9                # 核心采样概率
+
+data:
+  test_path: "../data/test.txt"  # 测试数据路径
+  batch_size: 500            # 批量处理大小

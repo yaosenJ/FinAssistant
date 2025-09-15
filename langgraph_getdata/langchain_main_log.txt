@@ -1,0 +1,189 @@
+D:\python\envs\mcp\python.exe D:\wangjing\demo\demo1.0\tool\main.py
+D:\wangjing\demo\demo1.0\tool\main.py:21: LangChainDeprecationWarning: LangChain agents will continue to be supported, but it is recommended for new use cases to be built with LangGraph. LangGraph offers a more flexible and full-featured framework for building agents, including support for tool-calling, persistence of state, and human-in-the-loop workflows. For details, refer to the `LangGraph documentation <https://langchain-ai.github.io/langgraph/>`_ as well as guides for `Migrating from AgentExecutor <https://python.langchain.com/docs/how_to/migrate_agent/>`_ and LangGraph's `Pre-built ReAct agent <https://langchain-ai.github.io/langgraph/how-tos/create-react-agent/>`_.
+  agent = initialize_agent(tools, chatLLM, agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+
+
+> Entering new AgentExecutor chain...
+D:\wangjing\demo\demo1.0\tool\main.py:25: LangChainDeprecationWarning: The method `Chain.run` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~invoke` instead.
+  agent.run("贵州茅台股票最近能不能买")
+Thought: 为了回答这个问题，我需要查询贵州茅台（股票代码：600519.SH）最近的市场数据，特别是其价格走势和交易量等信息。这将帮助评估当前是否是购买该股票的好时机。我将使用`query_stock_market_data`工具来获取这些信息。
+Action:
+```
+{
+  "action": "query_stock_market_data",
+  "action_input": {
+    "ts_code": "600519.SH",
+    "limit": 10
+  }
+}
+```
+Observation: 日期: 2025-04-03 | symbol: 600519 | ts_code: 600519.SH | open: 1530.0 | close: 1568.88 | high: 1586.0 | low: 1529.01 | 涨跌幅: 1.2821% | volume: 35,480.50 | amount: 555,744.00 | pe: 20.42 | pb: 1.94 | total_mv: 197,082,000.00
+
+日期: 2025-04-02 | symbol: 600519 | ts_code: 600519.SH | open: 1558.0 | close: 1549.02 | high: 1567.8 | low: 1545.5 | 涨跌幅: -0.4499% | volume: 21,674.00 | amount: 337,188.00 | pe: N/A | pb: 3.08 | total_mv: 194,588,000.00
+
+日期: 2025-04-01 | symbol: 600519 | ts_code: 600519.SH | open: 1564.0 | close: 1556.02 | high: 1569.89 | low: 1552.21 | 涨跌幅: -0.319% | volume: 18,556.40 | amount: 289,374.00 | pe: 20.51 | pb: 1.93 | total_mv: 195,467,000.00
+
+日期: 2025-03-31 | symbol: 600519 | ts_code: 600519.SH | open: 1580.98 | close: 1561.0 | high: 1586.96 | low: 1560.06 | 涨跌幅: -1.5272% | volume: 21,084.90 | amount: 331,186.00 | pe: N/A | pb: 13.58 | total_mv: 196,092,000.00
+
+日期: 2025-03-28 | symbol: 600519 | ts_code: 600519.SH | open: 1590.93 | close: 1585.21 | high: 1593.0 | low: 1576.0 | 涨跌幅: -0.2385% | volume: 16,227.90 | amount: 256,947.00 | pe: 46.68 | pb: 3.80 | total_mv: 199,134,000.00
+
+日期: 2025-03-27 | symbol: 600519 | ts_code: 600519.SH | open: 1576.0 | close: 1589.0 | high: 1598.25 | low: 1573.38 | 涨跌幅: 0.8249% | volume: 17,955.60 | amount: 284,889.00 | pe: 36.56 | pb: 2.17 | total_mv: 199,610,000.00
+
+日期: 2025-03-26 | symbol: 600519 | ts_code: 600519.SH | open: 1572.77 | close: 1576.0 | high: 1582.58 | low: 1571.0 | 涨跌幅: 0.0317% | volume: 14,323.60 | amount: 225,764.00 | pe: 68.55 | pb: 14.93 | total_mv: 197,977,000.00
+
+日期: 2025-03-25 | symbol: 600519 | ts_code: 600519.SH | open: 1588.0 | close: 1575.5 | high: 1592.8 | low: 1566.66 | 涨跌幅: -0.4738% | volume: 17,674.40 | amount: 278,329.00 | pe: 22.11 | pb: 1.51 | total_mv: 197,914,000.00
+
+日期: 2025-03-24 | symbol: 600519 | ts_code: 600519.SH | open: 1570.0 | close: 1583.0 | high: 1589.66 | low: 1562.38 | 涨跌幅: 0.5878% | volume: 25,565.80 | amount: 403,222.00 | pe: 15.06 | pb: 1.22 | total_mv: 198,856,000.00
+
+日期: 2025-03-21 | symbol: 600519 | ts_code: 600519.SH | open: 1599.0 | close: 1573.75 | high: 1612.2 | low: 1568.83 | 涨跌幅: -1.8859% | volume: 33,614.30 | amount: 532,497.00 | pe: 13.99 | pb: 2.53 | total_mv: 197,694,000.00
+Thought:从最近10个交易日的数据来看，贵州茅台（600519.SH）的股价经历了波动。近期该股价格在1529.01至1612.2之间波动，最新收盘价为1568.88元，相较于3月21日的1573.75元略有上涨。然而，股票投资需要综合考虑多方面因素，包括但不限于公司基本面、行业趋势以及宏观经济环境等。此外，个人的投资策略和风险承受能力也非常重要。因此，建议您结合自己的实际情况做出决策，并可参考专业分析师的意见或进行更深入的研究。
+
+Action:
+```
+{
+  "action": "Final Answer",
+  "action_input": "根据最近10个交易日的数据，贵州茅台（600519.SH）的股价呈现了一定程度的波动。是否购买这只股票取决于您的投资策略、风险偏好以及其他非市场因素。建议进一步研究并可能咨询财务顾问后再做决定。"
+}
+```
+
+> Finished chain.
+
+Process finished with exit code 0
+
+D:\python\envs\mcp\python.exe D:\wangjing\demo\demo1.0\tool\main.py
+D:\wangjing\demo\demo1.0\tool\main.py:21: LangChainDeprecationWarning: LangChain agents will continue to be supported, but it is recommended for new use cases to be built with LangGraph. LangGraph offers a more flexible and full-featured framework for building agents, including support for tool-calling, persistence of state, and human-in-the-loop workflows. For details, refer to the `LangGraph documentation <https://langchain-ai.github.io/langgraph/>`_ as well as guides for `Migrating from AgentExecutor <https://python.langchain.com/docs/how_to/migrate_agent/>`_ and LangGraph's `Pre-built ReAct agent <https://langchain-ai.github.io/langgraph/how-tos/create-react-agent/>`_.
+  agent = initialize_agent(tools, chatLLM, agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+
+
+> Entering new AgentExecutor chain...
+D:\wangjing\demo\demo1.0\tool\main.py:26: LangChainDeprecationWarning: The method `Chain.run` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~invoke` instead.
+  agent.run("平安银行股票最近能不能买")
+Thought: 用户想了解平安银行股票最近是否适合购买，这需要分析其近期市场表现。我应该先获取平安银行的最新市场数据来帮助评估。
+
+Action:
+```
+{
+  "action": "query_stock_market_data",
+  "action_input": {
+    "ts_code": "000001.SZ",
+    "limit": 5
+  }
+}
+```
+Observation: 日期: 2025-04-03 | symbol: 000001 | ts_code: 000001.SZ | open: 11.31 | close: 11.34 | high: 11.39 | low: 11.3 | 涨跌幅: -0.2639% | volume: 643,914.00 | amount: 73,038.00 | pe: 42.71 | pb: 3.41 | total_mv: 22,006,300.00
+
+日期: 2025-04-02 | symbol: 000001 | ts_code: 000001.SZ | open: 11.25 | close: 11.37 | high: 11.41 | low: 11.25 | 涨跌幅: 0.8873% | volume: 932,642.00 | amount: 105,875.00 | pe: 56.78 | pb: 3.14 | total_mv: 22,064,500.00
+
+日期: 2025-04-01 | symbol: 000001 | ts_code: 000001.SZ | open: 11.27 | close: 11.27 | high: 11.3 | low: 11.22 | 涨跌幅: 0.0888% | volume: 681,470.00 | amount: 76,742.00 | pe: 22.37 | pb: 1.07 | total_mv: 21,870,500.00
+
+日期: 2025-03-31 | symbol: 000001 | ts_code: 000001.SZ | open: 11.36 | close: 11.26 | high: 11.38 | low: 11.26 | 涨跌幅: -0.793% | volume: 1,116,130.00 | amount: 126,260.00 | pe: 21.98 | pb: 1.05 | total_mv: 21,851,100.00
+
+日期: 2025-03-28 | symbol: 000001 | ts_code: 000001.SZ | open: 11.39 | close: 11.35 | high: 11.4 | low: 11.34 | 涨跌幅: -0.3512% | volume: 644,946.00 | amount: 73,242.00 | pe: 22.72 | pb: 1.09 | total_mv: 22,025,700.00
+Thought:根据最近5个交易日的市场数据，平安银行股票价格在11.22至11.41之间波动。从涨跌幅来看，这五天中有两天下跌（-0.26%和-0.79%），三天上涨或持平（+0.89%，+0.09%，-0.35%）。总体而言，股价变化幅度较小，并且没有明显的趋势。此外，市盈率(pe)和市净率(pb)在这段时间内也有所波动，但整体处于合理范围内。
+
+然而，仅凭短期市场表现无法全面判断一只股票的投资价值。投资决策还应综合考虑公司基本面、行业前景以及宏观经济环境等因素。建议进一步研究平安银行的财务状况、业务发展情况及银行业整体发展趋势后再做决定。
+
+Action:
+```
+{
+  "action": "Final Answer",
+  "action_input": "根据最近5个交易日的数据分析，平安银行股价变动不大，涨跌互现。但从单看这些信息不足以做出买入与否的决定。您还需要关注公司的财务健康状况、行业发展前景等更深层次的因素。"
+}
+```
+
+> Finished chain.
+
+Process finished with exit code 0
+D:\python\envs\mcp\python.exe D:\wangjing\demo\demo1.0\tool\main.py
+D:\wangjing\demo\demo1.0\tool\main.py:21: LangChainDeprecationWarning: LangChain agents will continue to be supported, but it is recommended for new use cases to be built with LangGraph. LangGraph offers a more flexible and full-featured framework for building agents, including support for tool-calling, persistence of state, and human-in-the-loop workflows. For details, refer to the `LangGraph documentation <https://langchain-ai.github.io/langgraph/>`_ as well as guides for `Migrating from AgentExecutor <https://python.langchain.com/docs/how_to/migrate_agent/>`_ and LangGraph's `Pre-built ReAct agent <https://langchain-ai.github.io/langgraph/how-tos/create-react-agent/>`_.
+  agent = initialize_agent(tools, chatLLM, agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+
+
+> Entering new AgentExecutor chain...
+D:\wangjing\demo\demo1.0\tool\main.py:27: LangChainDeprecationWarning: The method `Chain.run` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~invoke` instead.
+  agent.run("沙河股份最近能不能买")
+Thought: 要判断沙河股份是否适合购买，我们需要首先获取其最新的市场数据来分析。这包括但不限于最近的价格走势、成交量等信息。我们将使用`query_stock_market_data`工具来查询该股票的最新市场数据。
+
+Action:
+```
+{
+  "action": "query_stock_market_data",
+  "action_input": {
+    "ts_code": "000014.SZ",
+    "limit": 10
+  }
+}
+```
+Observation: 日期: 2025-04-03 | symbol: 000014 | ts_code: 000014.SZ | open: 10.73 | close: 10.92 | high: 11.09 | low: 10.69 | 涨跌幅: 0.738% | volume: 46,123.00 | amount: 5,043.00 | pe: 45.74 | pb: 3.37 | total_mv: 264,314.00
+
+日期: 2025-04-02 | symbol: 000014 | ts_code: 000014.SZ | open: 11.16 | close: 10.84 | high: 11.18 | low: 10.78 | 涨跌幅: -1.9005% | volume: 51,489.00 | amount: 5,627.00 | pe: 17.00 | pb: 1.44 | total_mv: 262,378.00
+
+日期: 2025-04-01 | symbol: 000014 | ts_code: 000014.SZ | open: 10.68 | close: 11.05 | high: 11.08 | low: 10.68 | 涨跌幅: 3.3676% | volume: 72,406.00 | amount: 7,914.00 | pe: 22.72 | pb: 2.12 | total_mv: 267,461.00
+
+日期: 2025-03-31 | symbol: 000014 | ts_code: 000014.SZ | open: 11.12 | close: 10.69 | high: 11.22 | low: 10.67 | 涨跌幅: -5.6487% | volume: 85,026.90 | amount: 9,286.00 | pe: 21.81 | pb: 2.03 | total_mv: 258,747.00
+
+日期: 2025-03-28 | symbol: 000014 | ts_code: 000014.SZ | open: 11.42 | close: 11.33 | high: 11.58 | low: 11.2 | 涨跌幅: -0.3518% | volume: 76,284.00 | amount: 8,681.00 | pe: 20.74 | pb: 2.09 | total_mv: 274,238.00
+
+日期: 2025-03-27 | symbol: 000014 | ts_code: 000014.SZ | open: 11.27 | close: 11.37 | high: 11.56 | low: 11.15 | 涨跌幅: 0.6195% | volume: 63,038.80 | amount: 7,178.00 | pe: 92.94 | pb: 3.34 | total_mv: 275,207.00
+
+日期: 2025-03-26 | symbol: 000014 | ts_code: 000014.SZ | open: 11.45 | close: 11.3 | high: 11.47 | low: 11.25 | 涨跌幅: -0.3527% | volume: 49,077.80 | amount: 5,567.00 | pe: N/A | pb: 3.20 | total_mv: 273,512.00
+
+日期: 2025-03-25 | symbol: 000014 | ts_code: 000014.SZ | open: 11.01 | close: 11.34 | high: 11.38 | low: 10.93 | 涨跌幅: 2.6244% | volume: 55,153.20 | amount: 6,170.00 | pe: 45.57 | pb: 1.26 | total_mv: 274,480.00
+
+日期: 2025-03-24 | symbol: 000014 | ts_code: 000014.SZ | open: 11.27 | close: 11.05 | high: 11.31 | low: 10.78 | 涨跌幅: -3.2399% | volume: 66,922.00 | amount: 7,414.00 | pe: 20.56 | pb: 2.07 | total_mv: 267,461.00
+
+日期: 2025-03-21 | symbol: 000014 | ts_code: 000014.SZ | open: 11.35 | close: 11.42 | high: 11.49 | low: 11.02 | 涨跌幅: 0.5282% | volume: 71,157.60 | amount: 7,991.00 | pe: 20.70 | pb: 2.09 | total_mv: 276,417.00
+Thought:从沙河股份最近10个交易日的数据来看，股价在10.67至11.58元之间波动。这段时间内，该股票经历了上涨和下跌的过程，但总体上呈现轻微的上升趋势。值得注意的是，在3月24日和3月31日出现了较大的单日跌幅，分别为-3.24%和-5.65%，这可能表明市场对该股存在一定的不确定性或负面情绪。
+
+然而，仅凭这些信息还不足以做出是否购买的决定。投资决策应基于更全面的分析，包括但不限于公司的基本面、行业前景、宏观经济环境以及个人的投资目标和风险承受能力等因素。此外，技术分析也可能提供额外视角，比如支撑位与阻力位等。
+
+因此，我的建议是结合更多方面的信息和个人情况来综合判断，并考虑咨询专业的财经顾问。
+Action:
+```
+{
+  "action": "Final Answer",
+  "action_input": "从沙河股份最近10个交易日的数据来看，股价在10.67至11.58元之间波动。这段时间内，该股票经历了上涨和下跌的过程，但总体上呈现轻微的上升趋势。然而，仅凭这些信息还不足以做出是否购买的决定。投资决策应基于更全面的分析，包括但不限于公司的基本面、行业前景、宏观经济环境以及个人的投资目标和风险承受能力等因素。此外，技术分析也可能提供额外视角，比如支撑位与阻力位等。因此，我的建议是结合更多方面的信息和个人情况来综合判断，并考虑咨询专业的财经顾问。"
+}
+```
+
+> Finished chain.
+
+Process finished with exit code 0
+
+D:\python\envs\mcp\python.exe D:\wangjing\demo\demo1.0\tool\main.py
+D:\wangjing\demo\demo1.0\tool\main.py:21: LangChainDeprecationWarning: LangChain agents will continue to be supported, but it is recommended for new use cases to be built with LangGraph. LangGraph offers a more flexible and full-featured framework for building agents, including support for tool-calling, persistence of state, and human-in-the-loop workflows. For details, refer to the `LangGraph documentation <https://langchain-ai.github.io/langgraph/>`_ as well as guides for `Migrating from AgentExecutor <https://python.langchain.com/docs/how_to/migrate_agent/>`_ and LangGraph's `Pre-built ReAct agent <https://langchain-ai.github.io/langgraph/how-tos/create-react-agent/>`_.
+  agent = initialize_agent(tools, chatLLM, agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+
+
+> Entering new AgentExecutor chain...
+D:\wangjing\demo\demo1.0\tool\main.py:28: LangChainDeprecationWarning: The method `Chain.run` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~invoke` instead.
+  agent.run("招商银行所属行业是什么？")
+Action:
+```
+{
+  "action": "get_stock_industries",
+  "action_input": {
+    "ts_code": "600036.SH"
+  }
+}
+```
+Observation: 股票代码: 600036(600036.SH)
+公司名称: 招商银行
+所属行业数量: 3
+行业分类列表:
+  银行(801780.SI, L1)
+  股份制银行Ⅱ(801783.SI, L2)
+  股份制银行Ⅲ(857831.SI, L3)
+Thought:我已知招商银行所属的行业信息。
+
+Action:
+```
+{
+  "action": "Final Answer",
+  "action_input": "招商银行属于以下行业：银行（L1级别）、股份制银行Ⅱ（L2级别）和股份制银行Ⅲ（L3级别）。"
+}
+```
+
+> Finished chain.
+
+Process finished with exit code 0

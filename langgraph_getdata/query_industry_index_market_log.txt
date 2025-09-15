@@ -1,0 +1,111 @@
+D:\wangjing\demo\demo1.0\tool\query_industry_index_market.py:303: LangChainDeprecationWarning: LangChain agents will continue to be supported, but it is recommended for new use cases to be built with LangGraph. LangGraph offers a more flexible and full-featured framework for building agents, including support for tool-calling, persistence of state, and human-in-the-loop workflows. For details, refer to the `LangGraph documentation <https://langchain-ai.github.io/langgraph/>`_ as well as guides for `Migrating from AgentExecutor <https://python.langchain.com/docs/how_to/migrate_agent/>`_ and LangGraph's `Pre-built ReAct agent <https://langchain-ai.github.io/langgraph/how-tos/create-react-agent/>`_.
+  agent = initialize_agent(tools, chatLLM, agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+D:\wangjing\demo\demo1.0\tool\query_industry_index_market.py:306: LangChainDeprecationWarning: The method `Chain.run` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~invoke` instead.
+  agent.run("白酒行业包含哪些股票")
+
+
+> Entering new AgentExecutor chain...
+Thought: 为了回答这个问题，我需要使用get_stocks_by_industry工具来查询"白酒"行业的所有股票。
+
+Action:
+```
+{
+  "action": "get_stocks_by_industry",
+  "action_input": {
+    "industry_name": "白酒"
+  }
+}
+```
+Observation: 行业查询: 白酒 | 共找到 3 只股票
+
+
+股票代码: 801125(801125.SI)
+行业名称: 白酒Ⅱ
+市场分类: L2
+最近交易日数据:
+  日期: 2025-04-03 | 收盘价: 50888.6 | 涨跌幅: 1.33675%
+  日期: 2025-04-02 | 收盘价: 50217.3 | 涨跌幅: -0.411405%
+  日期: 2025-04-01 | 收盘价: 50424.8 | 涨跌幅: -0.0792632%
+
+股票代码: 801126(801126.SI)
+行业名称: 非白酒
+市场分类: L2
+最近交易日数据:
+  日期: 2025-04-03 | 收盘价: 4284.23 | 涨跌幅: 0.923908%
+  日期: 2025-04-02 | 收盘价: 4245.01 | 涨跌幅: 0.285145%
+  日期: 2025-04-01 | 收盘价: 4232.94 | 涨跌幅: 2.12504%
+
+股票代码: 851251(851251.SI)
+行业名称: 白酒Ⅲ
+市场分类: L3
+最近交易日数据:
+  日期: 2025-04-03 | 收盘价: 50888.6 | 涨跌幅: 1.33675%
+  日期: 2025-04-02 | 收盘价: 50217.3 | 涨跌幅: -0.411405%
+  日期: 2025-04-01 | 收盘价: 50424.8 | 涨跌幅: -0.0792632%
+Thought:我已经得到了"白酒"行业的股票列表以及它们最近3个交易日的数据。现在可以将这些信息整理后作为最终答案提供给用户。
+
+Action:
+```
+{
+  "action": "Final Answer",
+  "action_input": "根据您的查询，白酒行业包含以下3只股票及其最近3个交易日的信息：
+
+1. 股票代码: 801125 (801125.SI)
+   - 行业名称: 白酒Ⅱ
+   - 市场分类: L2
+   - 最近交易日数据:
+     * 2025-04-03 | 收盘价: 50888.6 | 涨跌幅: 1.34%
+     * 2025-04-02 | 收盘价: 50217.3 | 涨跌幅: -0.41%
+     * 2025-04-01 | 收盘价: 50424.8 | 涨跌幅: -0.08%
+
+2. 股票代码: 801126 (801126.SI)
+   - 行业名称: 非白酒
+   - 市场分类: L2
+   - 最近交易日数据:
+     * 2025-04-03 | 收盘价: 4284.23 | 涨跌幅: 0.92%
+     * 2025-04-02 | 收盘价: 4245.01 | 涨跌幅: 0.29%
+     * 2025-04-01 | 收盘价: 4232.94 | 涨跌幅: 2.13%
+
+3. 股票代码: 851251 (851251.SI)
+   - 行业名称: 白酒Ⅲ
+   - 市场分类: L3
+   - 最近交易日数据:
+     * 2025-04-03 | 收盘价: 50888.6 | 涨跌幅: 1.34%
+     * 2025-04-02 | 收盘价: 50217.3 | 涨跌幅: -0.41%
+     * 2025-04-01 | 收盘价: 50424.8 | 涨跌幅: -0.08%"
+}
+```
+
+> Finished chain.
+
+D:\wangjing\demo\demo1.0\tool\query_industry_index_market.py:303: LangChainDeprecationWarning: LangChain agents will continue to be supported, but it is recommended for new use cases to be built with LangGraph. LangGraph offers a more flexible and full-featured framework for building agents, including support for tool-calling, persistence of state, and human-in-the-loop workflows. For details, refer to the `LangGraph documentation <https://langchain-ai.github.io/langgraph/>`_ as well as guides for `Migrating from AgentExecutor <https://python.langchain.com/docs/how_to/migrate_agent/>`_ and LangGraph's `Pre-built ReAct agent <https://langchain-ai.github.io/langgraph/how-tos/create-react-agent/>`_.
+  agent = initialize_agent(tools, chatLLM, agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+D:\wangjing\demo\demo1.0\tool\query_industry_index_market.py:305: LangChainDeprecationWarning: The method `Chain.run` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~invoke` instead.
+  agent.run("801010.SI所属什么行业")
+
+
+> Entering new AgentExecutor chain...
+Thought: 需要使用get_industry_by_stock工具来查询股票代码801010.SI所属的行业信息。
+
+Action:
+```
+{
+  "action": "get_industry_by_stock",
+  "action_input": {
+    "ts_code": "801010.SI"
+  }
+}
+```
+Observation: 股票代码: 801010
+完整代码: 801010.SI
+行业名称: 农林牧渔
+行业分类: L1
+Thought:已经得到了801010.SI股票所属行业的信息，接下来可以直接回复用户。
+
+Action:
+```
+{
+  "action": "Final Answer",
+  "action_input": "股票代码801010.SI属于农林牧渔行业，行业分类为L1。"
+}
+```

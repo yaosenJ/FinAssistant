@@ -1,0 +1,112 @@
+2025-04-16 21:31:35,106 - __main__ - INFO - Milvus连接已关闭
+2025-04-16 21:51:43,578 - __main__ - ERROR - Milvus连接失败: <MilvusException: (code=2, message=Fail connecting to server on 192.168.1.227:19530, illegal connection params or server unavailable)>
+2025-04-16 21:51:43,578 - __main__ - ERROR - 系统运行失败: <MilvusException: (code=2, message=Fail connecting to server on 192.168.1.227:19530, illegal connection params or server unavailable)>
+Traceback (most recent call last):
+  File "D:\python\envs\mcp\Lib\site-packages\pymilvus\client\grpc_handler.py", line 149, in _wait_for_channel_ready
+    grpc.channel_ready_future(self._channel).result(timeout=timeout)
+  File "D:\python\envs\mcp\Lib\site-packages\grpc\_utilities.py", line 162, in result
+    self._block(timeout)
+  File "D:\python\envs\mcp\Lib\site-packages\grpc\_utilities.py", line 106, in _block
+    raise grpc.FutureTimeoutError()
+grpc.FutureTimeoutError
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\wangjing\demo\demo1.8\evaluate\test.py", line 393, in <module>
+    system = NewsSystem()
+             ^^^^^^^^^^^^
+  File "D:\wangjing\demo\demo1.8\evaluate\test.py", line 131, in __init__
+    self._init_milvus_connection()
+  File "D:\wangjing\demo\demo1.8\evaluate\test.py", line 139, in _init_milvus_connection
+    connections.connect(
+  File "D:\python\envs\mcp\Lib\site-packages\pymilvus\orm\connections.py", line 461, in connect
+    connect_milvus(**kwargs, user=user, password=password, token=token, db_name=db_name)
+  File "D:\python\envs\mcp\Lib\site-packages\pymilvus\orm\connections.py", line 411, in connect_milvus
+    gh._wait_for_channel_ready(timeout=timeout)
+  File "D:\python\envs\mcp\Lib\site-packages\pymilvus\client\grpc_handler.py", line 153, in _wait_for_channel_ready
+    raise MilvusException(
+pymilvus.exceptions.MilvusException: <MilvusException: (code=2, message=Fail connecting to server on 192.168.1.227:19530, illegal connection params or server unavailable)>
+2025-04-16 21:51:43,594 - __main__ - INFO - Milvus连接已关闭
+2025-04-16 22:13:34,611 - __main__ - INFO - Milvus连接池初始化成功
+2025-04-16 22:13:34,649 - __main__ - INFO - MySQL连接成功
+2025-04-16 22:13:34,652 - __main__ - INFO - 正在创建新集合: company_news_hybrid
+2025-04-16 22:13:36,226 - __main__ - INFO - 集合创建完成
+2025-04-16 22:13:36,226 - __main__ - INFO - 开始加载数据 2025-04-09 11:00:00 至 2025-04-11 11:00:00
+2025-04-16 22:13:36,359 - __main__ - INFO - 发现新数据: 总计 2549 条
+2025-04-16 22:13:36,359 - __main__ - INFO - 开始处理文本嵌入...
+2025-04-16 22:13:36,360 - __main__ - INFO - 处理嵌入批次 1
+2025-04-16 22:15:05,728 - __main__ - INFO - 处理嵌入批次 2
+2025-04-16 22:16:35,801 - __main__ - INFO - 处理嵌入批次 3
+2025-04-16 22:18:04,086 - __main__ - INFO - 处理嵌入批次 4
+2025-04-16 22:19:32,110 - __main__ - INFO - 处理嵌入批次 5
+2025-04-16 22:21:01,196 - __main__ - INFO - 处理嵌入批次 6
+2025-04-16 22:21:09,923 - __main__ - INFO - 准备插入 2549 条有效数据
+2025-04-16 22:21:09,924 - __main__ - INFO - 插入批次 1/13
+2025-04-16 22:21:10,013 - __main__ - INFO - 插入批次 2/13
+2025-04-16 22:21:10,096 - __main__ - INFO - 插入批次 3/13
+2025-04-16 22:21:10,198 - __main__ - INFO - 插入批次 4/13
+2025-04-16 22:21:10,293 - __main__ - INFO - 插入批次 5/13
+2025-04-16 22:21:10,373 - __main__ - INFO - 插入批次 6/13
+2025-04-16 22:21:10,498 - __main__ - INFO - 插入批次 7/13
+2025-04-16 22:21:10,581 - __main__ - INFO - 插入批次 8/13
+2025-04-16 22:21:10,688 - __main__ - INFO - 插入批次 9/13
+2025-04-16 22:21:10,821 - __main__ - INFO - 插入批次 10/13
+2025-04-16 22:21:10,905 - __main__ - INFO - 插入批次 11/13
+2025-04-16 22:21:10,987 - __main__ - INFO - 插入批次 12/13
+2025-04-16 22:21:11,118 - __main__ - INFO - 插入批次 13/13
+2025-04-16 22:21:11,188 - __main__ - INFO - 数据插入完成，成功 2549/2549 条
+2025-04-16 22:21:11,259 - __main__ - INFO - Milvus连接已关闭
+2025-04-16 22:30:26,981 - __main__ - INFO - Milvus连接池初始化成功
+2025-04-16 22:30:26,984 - __main__ - INFO - MySQL连接成功
+2025-04-16 22:30:26,986 - __main__ - INFO - 集合 company_news_hybrid 已存在，正在验证...
+2025-04-16 22:30:26,993 - __main__ - INFO - 开始加载数据 2025-04-01 00:00:00 至 2025-04-09 11:00:00
+2025-04-16 22:30:27,124 - __main__ - INFO - 发现新数据: 总计 3420 条
+2025-04-16 22:30:27,124 - __main__ - INFO - 开始处理文本嵌入...
+2025-04-16 22:30:27,125 - __main__ - INFO - 处理嵌入批次 1
+2025-04-16 22:31:56,070 - __main__ - INFO - 处理嵌入批次 2
+2025-04-16 22:33:24,379 - __main__ - INFO - 处理嵌入批次 3
+2025-04-16 22:34:53,915 - __main__ - INFO - 处理嵌入批次 4
+2025-04-16 22:36:22,153 - __main__ - INFO - 处理嵌入批次 5
+2025-04-16 22:37:51,009 - __main__ - INFO - 处理嵌入批次 6
+2025-04-16 22:39:19,585 - __main__ - INFO - 处理嵌入批次 7
+2025-04-16 22:40:33,479 - __main__ - INFO - 准备插入 3420 条有效数据
+2025-04-16 22:40:33,479 - __main__ - INFO - 插入批次 1/18
+2025-04-16 22:40:33,564 - __main__ - INFO - 插入批次 2/18
+2025-04-16 22:40:33,640 - __main__ - INFO - 插入批次 3/18
+2025-04-16 22:40:33,740 - __main__ - INFO - 插入批次 4/18
+2025-04-16 22:40:33,816 - __main__ - INFO - 插入批次 5/18
+2025-04-16 22:40:33,927 - __main__ - INFO - 插入批次 6/18
+2025-04-16 22:40:34,016 - __main__ - INFO - 插入批次 7/18
+2025-04-16 22:40:34,094 - __main__ - INFO - 插入批次 8/18
+2025-04-16 22:40:34,171 - __main__ - INFO - 插入批次 9/18
+2025-04-16 22:40:34,258 - __main__ - INFO - 插入批次 10/18
+2025-04-16 22:40:34,359 - __main__ - INFO - 插入批次 11/18
+2025-04-16 22:40:34,440 - __main__ - INFO - 插入批次 12/18
+2025-04-16 22:40:34,551 - __main__ - INFO - 插入批次 13/18
+2025-04-16 22:40:34,627 - __main__ - INFO - 插入批次 14/18
+2025-04-16 22:40:34,712 - __main__ - INFO - 插入批次 15/18
+2025-04-16 22:40:34,808 - __main__ - INFO - 插入批次 16/18
+2025-04-16 22:40:34,949 - __main__ - INFO - 插入批次 17/18
+2025-04-16 22:40:35,044 - __main__ - INFO - 插入批次 18/18
+2025-04-16 22:40:35,063 - __main__ - INFO - 数据插入完成，成功 3420/3420 条
+2025-04-16 22:40:35,124 - __main__ - INFO - Milvus连接已关闭
+2025-04-16 22:42:17,050 - __main__ - INFO - Milvus连接池初始化成功
+2025-04-16 22:42:17,052 - __main__ - INFO - MySQL连接成功
+2025-04-16 22:42:17,054 - __main__ - INFO - 集合 company_news_hybrid 已存在，正在验证...
+2025-04-16 22:42:17,068 - __main__ - INFO - 开始加载数据 2025-03-28 00:00:00 至 2025-04-01 00:00:00
+2025-04-16 22:42:17,135 - __main__ - INFO - 发现新数据: 总计 1372 条
+2025-04-16 22:42:17,135 - __main__ - INFO - 开始处理文本嵌入...
+2025-04-16 22:42:17,135 - __main__ - INFO - 处理嵌入批次 1
+2025-04-16 22:43:46,201 - __main__ - INFO - 处理嵌入批次 2
+2025-04-16 22:45:16,136 - __main__ - INFO - 处理嵌入批次 3
+2025-04-16 22:46:21,695 - __main__ - INFO - 准备插入 1372 条有效数据
+2025-04-16 22:46:21,696 - __main__ - INFO - 插入批次 1/7
+2025-04-16 22:46:21,779 - __main__ - INFO - 插入批次 2/7
+2025-04-16 22:46:21,873 - __main__ - INFO - 插入批次 3/7
+2025-04-16 22:46:21,950 - __main__ - INFO - 插入批次 4/7
+2025-04-16 22:46:22,027 - __main__ - INFO - 插入批次 5/7
+2025-04-16 22:46:22,103 - __main__ - INFO - 插入批次 6/7
+2025-04-16 22:46:22,188 - __main__ - INFO - 插入批次 7/7
+2025-04-16 22:46:22,266 - __main__ - INFO - 数据插入完成，成功 1372/1372 条
+2025-04-16 22:46:22,311 - __main__ - INFO - Milvus连接已关闭

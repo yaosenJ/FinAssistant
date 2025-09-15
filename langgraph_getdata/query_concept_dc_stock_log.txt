@@ -1,0 +1,118 @@
+D:\wangjing\demo\demo1.0\tool\query_concept_dc_stock.py:256: LangChainDeprecationWarning: LangChain agents will continue to be supported, but it is recommended for new use cases to be built with LangGraph. LangGraph offers a more flexible and full-featured framework for building agents, including support for tool-calling, persistence of state, and human-in-the-loop workflows. For details, refer to the `LangGraph documentation <https://langchain-ai.github.io/langgraph/>`_ as well as guides for `Migrating from AgentExecutor <https://python.langchain.com/docs/how_to/migrate_agent/>`_ and LangGraph's `Pre-built ReAct agent <https://langchain-ai.github.io/langgraph/how-tos/create-react-agent/>`_.
+  agent = initialize_agent(tools, chatLLM, agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+
+
+> Entering new AgentExecutor chain...
+D:\wangjing\demo\demo1.0\tool\query_concept_dc_stock.py:259: LangChainDeprecationWarning: The method `Chain.run` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~invoke` instead.
+  agent.run("腾讯云有哪些成分股")
+Action:
+```
+{
+  "action": "get_concept_stocks",
+  "action_input": {
+    "concept_name": "腾讯云"
+  }
+}
+```
+Observation: 概念代码: BK1189.DC
+概念名称: 腾讯云
+成分股数量: 24
+成分股列表:
+  安硕信息(300380, 300380.SZ)
+  流金科技(834021, 834021.BJ)
+  宝信软件(600845, 600845.SH)
+  宏景科技(301396, 301396.SZ)
+  锐捷网络(301165, 301165.SZ)
+  数据港(603881, 603881.SH)
+  弘信电子(300657, 300657.SZ)
+  浪潮信息(000977, 000977.SZ)
+  科华数据(002335, 002335.SZ)
+  天融信(002212, 002212.SZ)
+  浙数文化(600633, 600633.SH)
+  首都在线(300846, 300846.SZ)
+  深信服(300454, 300454.SZ)
+  云赛智联(600602, 600602.SH)
+  东华软件(002065, 002065.SZ)
+  长亮科技(300348, 300348.SZ)
+  泛微网络(603039, 603039.SH)
+  神州数码(000034, 000034.SZ)
+  华勤技术(603296, 603296.SH)
+  华宇软件(300271, 300271.SZ)
+  盛通股份(002599, 002599.SZ)
+  二六三(002467, 002467.SZ)
+  英维克(002837, 002837.SZ)
+  世纪恒通(301428, 301428.SZ)
+Thought:我已知腾讯云概念板块下的成分股列表，可以直接作答。
+
+Action:
+```
+{
+  "action": "Final Answer",
+  "action_input": "腾讯云概念板块下的成分股有：安硕信息(300380.SZ)、流金科技(834021.BJ)、宝信软件(600845.SH)、宏景科技(301396.SZ)、锐捷网络(301165.SZ)、数据港(603881.SH)、弘信电子(300657.SZ)、浪潮信息(000977.SZ)、科华数据(002335.SZ)、天融信(002212.SZ)、浙数文化(600633.SH)、首都在线(300846.SZ)、深信服(300454.SZ)、云赛智联(600602.SH)、东华软件(002065.SZ)、长亮科技(300348.SZ)、泛微网络(603039.SH)、神州数码(000034.SZ)、华勤技术(603296.SH)、华宇软件(300271.SZ)、盛通股份(002599.SZ)、二六三(002467.SZ)、英维克(002837.SZ)、世纪恒通(301428.SZ)，共24只股票。"
+}
+```
+
+> Finished chain.
+
+Entering new AgentExecutor chain...
+D:\wangjing\demo\demo1.0\tool\query_concept_dc_stock.py:256: LangChainDeprecationWarning: LangChain agents will continue to be supported, but it is recommended for new use cases to be built with LangGraph. LangGraph offers a more flexible and full-featured framework for building agents, including support for tool-calling, persistence of state, and human-in-the-loop workflows. For details, refer to the `LangGraph documentation <https://langchain-ai.github.io/langgraph/>`_ as well as guides for `Migrating from AgentExecutor <https://python.langchain.com/docs/how_to/migrate_agent/>`_ and LangGraph's `Pre-built ReAct agent <https://langchain-ai.github.io/langgraph/how-tos/create-react-agent/>`_.
+  agent = initialize_agent(tools, chatLLM, agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+D:\wangjing\demo\demo1.0\tool\query_concept_dc_stock.py:260: LangChainDeprecationWarning: The method `Chain.run` was deprecated in langchain 0.1.0 and will be removed in 1.0. Use :meth:`~invoke` instead.
+  agent.run("浪潮信息所属概念有哪些")
+Thought: 需要使用get_stock_concepts工具查询浪潮信息所属的概念板块
+Action:
+```
+{
+  "action": "get_stock_concepts",
+  "action_input": {
+    "company_name": "浪潮信息"
+  }
+}
+```
+Observation: 股票代码: 000977(000977.SZ)
+公司名称: 浪潮信息
+所属概念数量: 32
+概念板块列表:
+  腾讯云(BK1189.DC)
+  英伟达概念(BK1161.DC)
+  液冷概念(BK1138.DC)
+  算力概念(BK1134.DC)
+  AIGC概念(BK1111.DC)
+  信创(BK1104.DC)
+  东数西算(BK1064.DC)
+  数字经济(BK1061.DC)
+  元宇宙概念(BK1009.DC)
+  国资云概念(BK1008.DC)
+  抖音概念(字节概念)(BK0923.DC)
+  数据中心(BK0922.DC)
+  车联网(车路云)(BK0920.DC)
+  国产芯片(BK0891.DC)
+  标准普尔(BK0879.DC)
+  富时罗素(BK0867.DC)
+  边缘计算(BK0860.DC)
+  百度概念(BK0845.DC)
+  MSCI中国(BK0821.DC)
+  深股通(BK0804.DC)
+  人工智能(BK0800.DC)
+  深证100R(BK0743.DC)
+  国产软件(BK0696.DC)
+  央国企改革(BK0683.DC)
+  网络安全(BK0655.DC)
+  大数据(BK0634.DC)
+  智慧城市(BK0628.DC)
+  融资融券(BK0596.DC)
+  云计算(BK0579.DC)
+  预盈预增(BK0571.DC)
+  深成500(BK0568.DC)
+  HS300_(BK0500.DC)
+Thought:我已经查询到了浪潮信息所属的概念板块，现在可以给出最终答案。
+
+Action:
+```
+{
+  "action": "Final Answer",
+  "action_input": "浪潮信息（股票代码：000977.SZ）共属于32个概念板块，包括但不限于腾讯云、英伟达概念、液冷概念、算力概念等。"
+}
+```
+
+> Finished chain.

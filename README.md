@@ -1,0 +1,35 @@
+### 目录说明
+1. **congfig**  
+   - `congfig`: mysql、milvus、llm等相关配置信息
+2. **data**  
+   - `qa_pairs`: 存放使用qa_pairs数据集，采用各种检索方法评测rag性能产生结果数据
+      - `rag_results_2776_v1.csv`: 使用text-embedding-v1模型向量检索
+      - `rag_results_2776_v1_re_bge-reranker-large.csv`: 使用text-embedding-v1模型向量检索，bge-reranker-large重排模型精排
+      - `rag_results_2776_v3.csv`: 使用text-embedding-v3模型向量检索
+      - `rag_results_2776_v3_re.csv`: 使用text-embedding-v3模型向量检索，gte-rerank-v2重排模型精排
+      - `rag_results_hybrid.csv`: 使用text-embedding-v3模型向量检索以及BM25关键词的混合检索
+   - `qa_pairs_update`: 存放使用qa_pairs_update数据集，采用各种检索方法评测rag性能产生结果数据
+     - `rag_results_hybrid.csv`: 使用text-embedding-v3模型向量检索以及BM25关键词的混合检索
+     - `rag_results_v3_re_bge-reranker-large.csv`: 使用text-embedding-v3模型向量检索，bge-reranker-large重排模型精排
+   - `qa_pairs.csv`: 第一版评估数据，基于在一定的时间范围内所有新闻数据，生成得到问答对数据集
+   - `qa_pairs_update.csv`: 第二版评估数据，基于在一定的时间范围内，选择符合要求及与行业、个股、概念相关的新闻数据，生成得到问答对数据集
+   - `time.csv`: 交易时间数据
+3. **data_to_mysql_and_milvus**  
+   - `data_to_mysql_and_milvus`: 新闻主体识别入库mysql以及新闻数据向量化入库milvus
+4. **evaluate**  
+   - `evaluate`: 包含相关评估数据集构建以及评估
+5. **img**  
+   - `img`: 包含各种rag方案以及评估结果照片、milvus数据库相关信息照片
+6. **langgraph_getdata**  
+   - `langgraph_getdata`: 数据调度agent的开发
+7. **log**  
+   - `log`: 存放日志
+8. **src**  
+   - `src`: 项目主模块代码，新闻舆情文本召回以及信息整合，摘要生成
+9. **test**  
+   - `test`: 相关测试代码
+
+
+
+
+

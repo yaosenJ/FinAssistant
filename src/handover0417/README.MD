@@ -1,0 +1,82 @@
+### 目录说明
+1. **config**  
+   - `config.yaml`: milvus、mysql、qwen相关配置
+2. **data**  
+   - `test.txt`: 测试问题数据集
+   - `time.csv`: 股票交易日日期
+3. **img**  
+   - 问题和检索文本块相似度分布情况
+4. **log**  
+   - 相关代码运行日志
+5. **src**  
+   - `ask_service.py`: Python 客户端，用于调用本地部署的行业摘要生成服务。
+   - `database.py`: 基于交易日历计算日期范围，从MySQL数据库获取指定个股/行业/概念的新闻数据的工具
+   - `get_data.py`: 使用**database.py**提供的工具，获取对应的新闻数据
+   - `main.py`: 主函数，获取对应相似的文本块以及基于这些文本块生成摘要
+   - `rag_consine_date.py`: 基于余弦相似度算法，召回相似文本块
+   - `rag_consine_date_re_bge_reranker_large.py`: 基于向量模型**text-embedding-v1**初步召回文本，然后使用本地部署的**bge-reranker-large**重排模型进行精排
+   - `reranker_api.py`: 重排模型bge-reranker_large模型的部署
+   - `service_api.py`: 基于**FastAPI**构建的行业分析摘要生成服务，支持通过自然语言查询生成行业报告摘要。
+   - `summary_generation.py`: 基于详细版的提示词工程，整合多路召回（**milvus**和**mysql**）文本的整合，然后生成对应的简报
+   - `summary_generation2.py`: 基于简约版的提示词工程，整合多路召回（**milvus**和**mysql**）文本的整合，然后生成对应的简报
+  
+### 运行前提条件
+
+开启重排模型的服务
+1. 先登录服务器，其配置如下：
+   - ip：192.168.1.119   
+   - 账户名：km_gpu_2
+   - 密码：Km0621
+
+2. 启动
+```bash
+conda activate qwen25
+cd code
+uvicorn rerank_api:app --host 192.168.1.119 --port 8011 --workers 2
+```
+
+3. 运行结果如图所示：
+
+![](./img/bge-reranker_large-server.png)
+
+
+### 关键文件说明
+
+#### main.py
+
+主函数入口，传入一个query，content，type，返回对应文本摘要
+其中type取值有三种：**stock(个股)**，**industry(行业)**，**concept(概念)**
+content表示对应type的属性值
+```python
+def main(query, content, type):
+    text = get_content(query, content, type)
+    summary_content = generate_summary(query, text)
+    return summary_content
+```
+
+#### service_api.py
+
+请求参数
+
+字段	类型	必填	说明
+
+**query**	string	是	分析查询语句（示例："新能源汽车行业未来5年发展趋势"）
+
+**content**	string	是	分析主体关键词（示例："新能源车"）
+
+**type**	string	是	分析类型（示例："concept"）
+
+#### ask_service.py
+##### 输入
+```json
+{
+    "query": "新能源汽车行业未来5年的发展前景如何？",
+    'content': '新能源车',
+    'type': 'concept'
+}
+```
+##### 成功响应
+
+```json
+ {'summary_content': '新能源汽车行业未来5年的发展前景分析如下：\n\n1. **市场需求旺盛**：根据宁德时代的业绩说明会，当前市场需求旺盛，公司产能利用率处于饱和状态。这表明全球范围内对新能源汽车电池的需求持续增长。\n\n2. **销量增长显著**：比亚迪和吉利等国内主要车企在2025年第一季度的新能源汽车销量表现强劲。其中，比亚迪3月的新能源汽车销量继续攀升，而吉利控股集团第一季度总销量中新能源汽车占比也有所提升，同比增长31%。\n\n3. **新产品推出频繁**：法拉第未来计划年底推出首款FX车型，比亚迪腾势N9车型也将于近期上市。这些新产品的推出将进一步丰富市场选择，推动行业技术进步和市场竞争。\n\n4. **政策支持与国际化趋势**：张兴海委员提出，新能源汽车产业需要通过持续创新走向国际化。中国作为新能源汽车的核心领导者，在国内外政策环境变化的情况下，仍需保持领先地位并拓展国际市场。\n\n5. **市场结构变化**：乘联分会数据显示，新能源汽车已成为中国乘用车市场的核心增长主力。尽管燃油车市场走势较弱，但新能源汽车零售和批发量均呈现显著增长，累计零售和批发量分别同比增长35%和超过30%。\n\n综上所述，未来5年新能源汽车行业将继续受益于市场需求的增长、技术创新以及政策支持。随着更多新车型的推出和国际市场的拓展，行业有望实现更快速的发展。同时，产业链上下游企业如宁德时代等也将持续受益于行业的高景气度。'}
+```
