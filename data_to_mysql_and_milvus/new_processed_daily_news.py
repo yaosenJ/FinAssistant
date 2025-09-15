@@ -38,7 +38,7 @@ Y_DB_CONFIG = {
 
 
 
-DASHSCOPE_API_KEY = 'sk-48d14c2089104df1a059151d49df8fae'
+DASHSCOPE_API_KEY = 'sk-48d14c2089104d'
 
 # 连接到MySQL数据库
 def connect_mysql():
