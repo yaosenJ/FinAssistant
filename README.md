@@ -129,4 +129,4 @@ python data_to_mysql_and_milvus/text_embedding_to_milvus_hybrid_search_new.py
 
 ## 许可证
 
-见仓库根目录 `LICENSE`（若无请按企业/团队规范补充）。
+见仓库根目录 `LICENSE`。
