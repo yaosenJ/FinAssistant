@@ -12,12 +12,6 @@ A 股市场数据维度多、信息量大，散户和中小机构难以高效整
 
 ### 技术路线
 
-```
-用户提问 → FastAPI 接口 → AgentScope Agent → 调用工具查询数据 → LLM 汇总生成回答
-                                              ↓
-                              MySQL(结构化) + Milvus(向量检索) + JSON(原始数据)
-```
-
 | 层级 | 技术选型 |
 |------|----------|
 | 智能体框架 | AgentScope 2.0（多 Agent 编排） |
@@ -238,67 +232,203 @@ A 股市场数据维度多、信息量大，散户和中小机构难以高效整
 | 概念板块成分股 | 213 板块 | 新浪财经 (akshare) | - |
 | 财经新闻 | 3097 条 | 同花顺 7x24 | 2026-01-01 ~ 至今 |
 
-### 3.2 数据结构
+### 3.2 MySQL 数据表结构
 
-#### 个股日行情
+数据已导入阿里云 RDS MySQL，包含两个数据库：`market_data`（行情/财务）和 `stock_news`（新闻）。
 
-每只股票一个 JSON 文件，每条记录为一个交易日：
+#### market_data.company_info — 公司基本信息
 
-```json
-{
-  "trade_date": "2026-01-05",
-  "ts_code": "600000.SH",
-  "symbol": "600000",
-  "open": 12.47, "close": 11.82, "high": 12.48, "low": 11.8,
-  "volume": 122284342.0,
-  "amount": 1459886350.0,
-  "pe_ttm": 5.18, "pe_static": 5.01, "pb": 0.56, "pcf": 3.52,
-  "total_mv": 3936.75,
-  "total_share": 33305838300.0
-}
+```sql
+CREATE TABLE company_info (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '自增主键',
+    ts_code VARCHAR(20) NOT NULL COMMENT '股票代码(带后缀), 如600000.SH',
+    symbol VARCHAR(10) NOT NULL COMMENT '股票代码(纯数字)',
+    stock_name VARCHAR(50) COMMENT '股票简称',
+    full_name VARCHAR(100) COMMENT '公司全称',
+    industry VARCHAR(50) COMMENT '所属行业, 如J金融业',
+    list_date VARCHAR(20) COMMENT '上市日期, 格式YYYY-MM-DD',
+    market VARCHAR(5) COMMENT '市场, SH=沪市 SZ=深市',
+    updated_at VARCHAR(30) COMMENT '数据更新时间',
+    UNIQUE KEY uk_ts_code (ts_code)
+)
 ```
 
-#### 公司基本信息
+#### market_data.stock_kline — 个股日K线行情
 
-```json
-// 沪市
-{ "ts_code": "600000.SH", "stock_name": "浦发银行", "full_name": "上海浦东发展银行股份有限公司", "list_date": "1999-11-10", "market": "SH" }
-// 深市
-{ "ts_code": "000001.SZ", "stock_name": "平安银行", "industry": "J 金融业", "list_date": "1991-04-03", "total_share": 19405918198.0, "market": "SZ" }
+```sql
+CREATE TABLE stock_kline (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增主键',
+    ts_code VARCHAR(20) NOT NULL COMMENT '股票代码(带后缀), 如600000.SH',
+    symbol VARCHAR(10) NOT NULL COMMENT '股票代码(纯数字)',
+    trade_date VARCHAR(20) NOT NULL COMMENT '交易日期, 格式YYYY-MM-DD',
+    open DOUBLE COMMENT '开盘价(元)',
+    close DOUBLE COMMENT '收盘价(元)',
+    high DOUBLE COMMENT '最高价(元)',
+    low DOUBLE COMMENT '最低价(元)',
+    pre_close DOUBLE COMMENT '前收盘价(元)',
+    change_data DOUBLE COMMENT '涨跌额(元)',
+    pct_chg DOUBLE COMMENT '涨跌幅(%)',
+    volume DOUBLE COMMENT '成交量(股)',
+    amount DOUBLE COMMENT '成交额(元)',
+    pe DOUBLE COMMENT '市盈率',
+    pb DOUBLE COMMENT '市净率',
+    total_mv DOUBLE COMMENT '总市值(亿元)',
+    total_share DOUBLE COMMENT '总股本(股)',
+    float_share DOUBLE COMMENT '流通股本(股)',
+    circ_mv DOUBLE COMMENT '流通市值(亿元)',
+    ln_pctchg DOUBLE COMMENT '对数涨跌幅',
+    pe_ttm DOUBLE COMMENT '滚动市盈率(TTM)',
+    pe_static DOUBLE COMMENT '静态市盈率',
+    pcf DOUBLE COMMENT '市现率',
+    UNIQUE KEY uk_code_date (ts_code, trade_date),
+    KEY idx_trade_date (trade_date),
+    KEY idx_symbol (symbol)
+)
 ```
 
-> 沪市不含 `industry` 字段；深市不含 `full_name`。
+#### market_data.stock_financial — 三大财务报表
 
-#### 三大财务报表
-
-每只股票一个文件，包含 `现金流量表`、`利润表`、`资产负债表`，按报告日倒序排列，近三年数据。
-
-#### 板块日行情
-
-```json
-{ "industry_name": "半导体", "industry_ts_code": "881121", "daily_index": [
-    { "trade_date": "2026-01-05", "open": 12092.8, "close": 12466.8, "high": 12466.8, "low": 12092.8, "vol": 2724632700, "amount": 20579792.0, "pct_chg": 1.84, "pct_change": 2.33 }
-] }
+```sql
+CREATE TABLE stock_financial (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增主键',
+    ts_code VARCHAR(20) NOT NULL COMMENT '股票代码(带后缀), 如600000.SH',
+    symbol VARCHAR(10) NOT NULL COMMENT '股票代码(纯数字)',
+    statement_type VARCHAR(20) NOT NULL COMMENT '报表类型: income=利润表, balance=资产负债表, cashflow=现金流量表',
+    report_date VARCHAR(20) NOT NULL COMMENT '报告日, 如20260331',
+    report_data JSON COMMENT '完整报表数据(JSON格式)',
+    UNIQUE KEY uk_code_type_date (ts_code, statement_type, report_date),
+    KEY idx_symbol (symbol),
+    KEY idx_report_date (report_date),
+    KEY idx_statement_type (statement_type)
+)
 ```
 
-概念板块结构一致，字段名为 `concept_name` / `concept_ts_code`。
+> 不同行业财务字段差异大（银行 vs 制造业），因此采用 JSON 存储完整报表数据。
 
-#### 板块成分股
+#### market_data.sector_industry_daily — 行业板块日K线
 
-```json
-// 行业板块（THS，仅代码+名称）
-{ "name": "半导体", "code": "881121", "stock_count": 100, "stocks": [{ "code": "688216", "name": "气派科技" }] }
-// 概念板块（Sina，含行情快照）
-{ "name": "华为汽车", "stock_count": 97, "stocks": [{ "code": "600006", "name": "东风股份", "trade": "5.270", "changepercent": 3.131, "mktcap": 1054000 }] }
+```sql
+CREATE TABLE sector_industry_daily (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增主键',
+    sector_name VARCHAR(50) NOT NULL COMMENT '板块名称',
+    sector_code VARCHAR(20) NOT NULL COMMENT '板块代码',
+    trade_date VARCHAR(20) NOT NULL COMMENT '交易日期',
+    open DOUBLE COMMENT '开盘点位',
+    high DOUBLE COMMENT '最高点位',
+    low DOUBLE COMMENT '最低点位',
+    close DOUBLE COMMENT '收盘点位',
+    vol DOUBLE COMMENT '成交量',
+    amount DOUBLE COMMENT '成交额',
+    pct_chg DOUBLE COMMENT '涨跌幅(%)',
+    change_data DOUBLE COMMENT '涨跌点数',
+    pct_change DOUBLE COMMENT '涨跌幅(备用)',
+    turnover_rate DOUBLE COMMENT '换手率',
+    UNIQUE KEY uk_code_date (sector_code, trade_date),
+    KEY idx_trade_date (trade_date),
+    KEY idx_sector_name (sector_name)
+)
 ```
 
-#### 财经新闻
+#### market_data.sector_concept_daily — 概念板块日K线
 
-```json
-{ "id": "123456", "title": "标题", "digest": "摘要", "url": "链接", "tags": [{ "id": "1", "name": "标签" }], "ctime_str": "2024-01-01 08:00:00", "source": "来源" }
+```sql
+CREATE TABLE sector_concept_daily (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增主键',
+    sector_name VARCHAR(50) NOT NULL COMMENT '板块名称',
+    sector_code VARCHAR(20) NOT NULL COMMENT '板块代码',
+    trade_date VARCHAR(20) NOT NULL COMMENT '交易日期',
+    open DOUBLE COMMENT '开盘点位',
+    high DOUBLE COMMENT '最高点位',
+    low DOUBLE COMMENT '最低点位',
+    close DOUBLE COMMENT '收盘点位',
+    vol DOUBLE COMMENT '成交量',
+    amount DOUBLE COMMENT '成交额',
+    pct_chg DOUBLE COMMENT '涨跌幅(%)',
+    change_data DOUBLE COMMENT '涨跌点数',
+    pct_change DOUBLE COMMENT '涨跌幅(备用)',
+    turnover_rate DOUBLE COMMENT '换手率',
+    UNIQUE KEY uk_code_date (sector_code, trade_date),
+    KEY idx_trade_date (trade_date),
+    KEY idx_sector_name (sector_name)
+)
 ```
 
-### 3.3 数据采集脚本
+#### market_data.sector_industry_cons — 行业板块成分股
+
+```sql
+CREATE TABLE sector_industry_cons (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增主键',
+    sector_name VARCHAR(50) NOT NULL COMMENT '板块名称',
+    sector_code VARCHAR(20) NOT NULL COMMENT '板块代码',
+    stock_code VARCHAR(10) NOT NULL COMMENT '股票代码',
+    stock_name VARCHAR(50) COMMENT '股票名称',
+    UNIQUE KEY uk_sector_stock (sector_code, stock_code),
+    KEY idx_sector_name (sector_name),
+    KEY idx_stock_code (stock_code)
+)
+```
+
+#### market_data.sector_concept_cons — 概念板块成分股
+
+```sql
+CREATE TABLE sector_concept_cons (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增主键',
+    sector_name VARCHAR(50) NOT NULL COMMENT '板块名称',
+    sector_code VARCHAR(20) NOT NULL COMMENT '板块代码',
+    stock_code VARCHAR(10) NOT NULL COMMENT '股票代码',
+    stock_name VARCHAR(50) COMMENT '股票名称',
+    UNIQUE KEY uk_sector_stock (sector_code, stock_code),
+    KEY idx_sector_name (sector_name),
+    KEY idx_stock_code (stock_code)
+)
+```
+
+#### stock_news.news_em — 东财7x24快讯
+
+```sql
+CREATE TABLE news_em (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '自增主键',
+    title VARCHAR(500) NOT NULL COMMENT '新闻标题',
+    digest TEXT COMMENT '新闻摘要',
+    publish_time VARCHAR(30) COMMENT '发布时间',
+    url VARCHAR(500) COMMENT '新闻链接',
+    crawl_time VARCHAR(30) COMMENT '爬取时间',
+    UNIQUE KEY uk_title_time (title, publish_time)
+)
+```
+
+#### stock_news.news_ths — 同花顺财经新闻
+
+```sql
+CREATE TABLE news_ths (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '自增主键',
+    news_id VARCHAR(20) NOT NULL COMMENT '新闻ID',
+    title VARCHAR(500) NOT NULL COMMENT '新闻标题',
+    digest TEXT COMMENT '新闻摘要',
+    url VARCHAR(500) COMMENT '新闻链接',
+    tags VARCHAR(500) COMMENT '标签(逗号分隔)',
+    ctime_str VARCHAR(30) COMMENT '发布时间',
+    source VARCHAR(100) COMMENT '来源',
+    crawl_time VARCHAR(30) COMMENT '爬取时间',
+    UNIQUE KEY uk_news_id (news_id),
+    KEY idx_ctime (ctime_str)
+)
+```
+
+### 3.3 数据导入脚本
+
+| 脚本 | 目标表 | 说明 |
+|------|--------|------|
+| `import_company_info_to_mysql.py` | `market_data.company_info` | 沪深公司基本信息 |
+| `import_kline_to_mysql.py` | `market_data.stock_kline` | 个股日K线（56万+条） |
+| `import_financial_to_mysql.py` | `market_data.stock_financial` | 三大财务报表（17万+条） |
+| `import_sector_to_mysql.py` | `market_data.sector_industry_daily` / `sector_concept_daily` | 板块日K线 |
+| `import_sector_cons_to_mysql.py` | `market_data.sector_industry_cons` / `sector_concept_cons` | 板块成分股 |
+| `import_news_em_to_mysql.py` | `stock_news.news_em` | 东财快讯 |
+| `import_news_ths_to_mysql.py` | `stock_news.news_ths` | 同花顺新闻 |
+| `auto_news_em_to_mysql.py` | `stock_news.news_em` | 东财快讯定时爬取入库 |
+
+### 3.4 数据采集脚本
 
 | 脚本 | 用途 | 数据源 |
 |------|------|--------|
@@ -311,7 +441,7 @@ A 股市场数据维度多、信息量大，散户和中小机构难以高效整
 | `crawl_news_ths.py` | 财经新闻 | 同花顺 7x24 API |
 | `crawl_news_em.py` | 东财7x24快讯（定时） | 东方财富 (akshare) |
 
-### 3.4 已知问题
+### 3.5 已知问题
 
 | 问题 | 说明 |
 |------|------|
@@ -326,7 +456,7 @@ A 股市场数据维度多、信息量大，散户和中小机构难以高效整
 
 参考项目：`D:\realme_agent0713_1\realme_agent\`（AgentScope 2.0 客服智能体，已完成生产级部署）
 
-### 5.1 整体架构
+### 4.1 整体架构
 
 ```
 用户提问 → FastAPI 接口 → Agent (system_prompt + model + toolkit + middlewares)
@@ -339,7 +469,7 @@ A 股市场数据维度多、信息量大，散户和中小机构难以高效整
                              └── ToolGroup("研报生成")   → tools/indicators.py + skills/research-report/
 ```
 
-### 5.2 目录结构
+### 4.2 目录结构
 
 ```
 FinAssistant/
@@ -366,7 +496,7 @@ FinAssistant/
 └── data_to_mysql_and_milvus/    # 已有爬虫脚本（不动）
 ```
 
-### 5.3 实现步骤
+### 4.3 实现步骤
 
 #### 第一步：config.py
 
