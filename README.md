@@ -454,7 +454,6 @@ CREATE TABLE news_ths (
 
 ## 四、AgentScope 2.0 智能体实现思路
 
-参考项目：`D:\realme_agent0713_1\realme_agent\`（AgentScope 2.0 客服智能体，已完成生产级部署）
 
 ### 4.1 整体架构
 
