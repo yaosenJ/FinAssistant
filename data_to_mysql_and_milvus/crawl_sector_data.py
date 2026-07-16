@@ -24,9 +24,9 @@
 - turnover_rate: 换手率(%) (THS不提供，为null)
 
 用法:
-    python crawl_sector_data.py industry    # 只爬行业板块
-    python crawl_sector_data.py concept     # 只爬概念板块
-    python crawl_sector_data.py all         # 全部
+    python crawl_sector_data.py industry    # 增量爬行业板块
+    python crawl_sector_data.py concept     # 增量爬概念板块
+    python crawl_sector_data.py all         # 全部增量
 """
 
 import json
@@ -56,8 +56,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-START_DATE = '2026-01-01'
-END_DATE = '2026-07-10'
+START_DATE = '20260101'
+END_DATE = datetime.now().strftime('%Y%m%d')
 REQUEST_DELAY = (0.5, 1.5)
 BATCH_PAUSE_SIZE = 20
 BATCH_PAUSE_DELAY = (3, 6)
@@ -86,23 +86,57 @@ def normalize_date(val):
     return str(val)[:10]
 
 
-def calc_extra_fields(records):
-    """计算涨跌幅、涨跌额、振幅"""
+def date_to_compact(d):
+    """YYYY-MM-DD → YYYYMMDD"""
+    return d.replace('-', '')
+
+
+def load_existing_data(filepath):
+    """加载已有JSON数据"""
+    if not os.path.exists(filepath):
+        return []
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def get_latest_date(daily_index):
+    """获取板块 daily_index 中最新交易日期"""
+    if not daily_index:
+        return None
+    dates = [r['trade_date'] for r in daily_index if r.get('trade_date')]
+    return max(dates) if dates else None
+
+
+def calc_extra_fields(records, prev_close=None):
+    """计算涨跌幅、涨跌额、振幅
+
+    Args:
+        records: 需要计算的记录列表
+        prev_close: 前一条记录的收盘价（增量追加时传入）
+    """
     for i, r in enumerate(records):
         close = r.get('close')
         high = r.get('high')
         low = r.get('low')
-        prev_close = records[i-1].get('close') if i > 0 else None
+        if i == 0 and prev_close is not None:
+            pc = prev_close
+        elif i > 0:
+            pc = records[i-1].get('close')
+        else:
+            pc = None
 
-        if prev_close and prev_close != 0 and close is not None:
-            r['pct_chg'] = round((close - prev_close) / prev_close * 100, 2)
-            r['change_data'] = round(close - prev_close, 2)
+        if pc and pc != 0 and close is not None:
+            r['pct_chg'] = round((close - pc) / pc * 100, 2)
+            r['change_data'] = round(close - pc, 2)
         else:
             r['pct_chg'] = None
             r['change_data'] = None
 
-        if prev_close and prev_close != 0 and high is not None and low is not None:
-            r['pct_change'] = round((high - low) / prev_close * 100, 2)
+        if pc and pc != 0 and high is not None and low is not None:
+            r['pct_change'] = round((high - low) / pc * 100, 2)
         else:
             r['pct_change'] = None
 
@@ -130,10 +164,11 @@ def crawl_industry_list():
         return []
 
 
-def crawl_industry_index(sector_name):
+def crawl_industry_index(sector_name, start_date=None, prev_close=None):
     """获取单个行业板块的历史指数行情"""
     try:
-        df = ak.stock_board_industry_index_ths(symbol=sector_name, start_date='20260101', end_date='20260710')
+        sd = start_date or START_DATE
+        df = ak.stock_board_industry_index_ths(symbol=sector_name, start_date=sd, end_date=END_DATE)
         if df is None or df.empty:
             return []
         records = []
@@ -148,8 +183,7 @@ def crawl_industry_index(sector_name):
                 'vol': int(row['成交量']) if pd.notna(row['成交量']) else None,
                 'amount': round(safe_float(row['成交额']) / 10000, 2) if safe_float(row['成交额']) else None,  # 转为万元
             })
-        records = [r for r in records if START_DATE <= r['trade_date'] <= END_DATE]
-        records = calc_extra_fields(records)
+        records = calc_extra_fields(records, prev_close=prev_close)
         return records
     except Exception as e:
         logger.warning(f"行业指数 {sector_name} 失败: {e}")
@@ -157,34 +191,68 @@ def crawl_industry_index(sector_name):
 
 
 def crawl_all_industry():
-    """爬取全部行业板块数据"""
+    """增量爬取全部行业板块数据"""
     sectors = crawl_industry_list()
     if not sectors:
         return
 
-    all_data = []
+    output_file = os.path.join(DATA_DIR, 'industry_sectors.json')
+    existing = load_existing_data(output_file)
+    existing_map = {item['industry_ts_code']: item for item in existing}
+
     total = len(sectors)
+    updated = 0
+    skipped = 0
+
     for idx, sector in enumerate(sectors):
         name = sector['name']
+        code = sector['code']
         time.sleep(random.uniform(*REQUEST_DELAY))
 
-        index_data = crawl_industry_index(name)
-        info = {
-            'industry_name': name,
-            'industry_ts_code': sector['code'],
-            'daily_index': index_data,
-        }
+        # 检查已有数据，确定增量起始日期
+        existing_item = existing_map.get(code, {})
+        existing_index = existing_item.get('daily_index', [])
+        latest = get_latest_date(existing_index)
 
-        all_data.append(info)
-        logger.info(f"[{idx+1}/{total}] {name}: {len(index_data)} 条日线")
+        if latest and date_to_compact(latest) >= END_DATE:
+            skipped += 1
+            continue
+
+        # 增量起始日期：已有数据最新日期的下一天
+        if latest:
+            from datetime import timedelta
+            next_day = (datetime.strptime(latest, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y%m%d')
+        else:
+            next_day = START_DATE
+
+        # 获取前一条记录的close用于计算pct_chg
+        prev_close = existing_index[-1].get('close') if existing_index else None
+
+        new_data = crawl_industry_index(name, start_date=next_day, prev_close=prev_close)
+
+        if new_data:
+            merged_index = existing_index + new_data
+            existing_map[code] = {
+                'industry_name': name,
+                'industry_ts_code': code,
+                'daily_index': merged_index,
+            }
+            updated += 1
+            logger.info(f"[{idx+1}/{total}] {name}: 追加 {len(new_data)} 条, 累计 {len(merged_index)} 条")
+        elif not existing_index:
+            existing_map[code] = {
+                'industry_name': name,
+                'industry_ts_code': code,
+                'daily_index': [],
+            }
 
         if (idx + 1) % BATCH_PAUSE_SIZE == 0:
             delay = random.uniform(*BATCH_PAUSE_DELAY)
             logger.info(f"--- 已处理{idx+1}个，暂停{delay:.1f}秒 ---")
             time.sleep(delay)
 
-    save_json(os.path.join(DATA_DIR, 'industry_sectors.json'), all_data)
-    logger.info(f"行业板块完成: {len(all_data)} 个，保存到 industry_sectors.json")
+    save_json(output_file, list(existing_map.values()))
+    logger.info(f"行业板块完成: 更新 {updated}, 跳过 {skipped}, 共 {total}")
 
 
 # ==================== 概念板块 ====================
@@ -207,10 +275,11 @@ def crawl_concept_list():
         return []
 
 
-def crawl_concept_index(concept_name):
+def crawl_concept_index(concept_name, start_date=None, prev_close=None):
     """获取单个概念板块的历史指数行情"""
     try:
-        df = ak.stock_board_concept_index_ths(symbol=concept_name, start_date='20260101', end_date='20260710')
+        sd = start_date or START_DATE
+        df = ak.stock_board_concept_index_ths(symbol=concept_name, start_date=sd, end_date=END_DATE)
         if df is None or df.empty:
             return []
         records = []
@@ -225,8 +294,7 @@ def crawl_concept_index(concept_name):
                 'vol': int(row['成交量']) if pd.notna(row['成交量']) else None,
                 'amount': round(safe_float(row['成交额']) / 10000, 2) if safe_float(row['成交额']) else None,  # 转为万元
             })
-        records = [r for r in records if START_DATE <= r['trade_date'] <= END_DATE]
-        records = calc_extra_fields(records)
+        records = calc_extra_fields(records, prev_close=prev_close)
         return records
     except Exception as e:
         logger.warning(f"概念指数 {concept_name} 失败: {e}")
@@ -234,34 +302,65 @@ def crawl_concept_index(concept_name):
 
 
 def crawl_all_concept():
-    """爬取全部概念板块数据"""
+    """增量爬取全部概念板块数据"""
     sectors = crawl_concept_list()
     if not sectors:
         return
 
-    all_data = []
+    output_file = os.path.join(DATA_DIR, 'concept_sectors.json')
+    existing = load_existing_data(output_file)
+    existing_map = {item['concept_ts_code']: item for item in existing}
+
     total = len(sectors)
+    updated = 0
+    skipped = 0
+
     for idx, sector in enumerate(sectors):
         name = sector['name']
+        code = sector['code']
         time.sleep(random.uniform(*REQUEST_DELAY))
 
-        index_data = crawl_concept_index(name)
-        info = {
-            'concept_name': name,
-            'concept_ts_code': sector['code'],
-            'daily_index': index_data,
-        }
+        existing_item = existing_map.get(code, {})
+        existing_index = existing_item.get('daily_index', [])
+        latest = get_latest_date(existing_index)
 
-        all_data.append(info)
-        logger.info(f"[{idx+1}/{total}] {name}: {len(index_data)} 条日线")
+        if latest and date_to_compact(latest) >= END_DATE:
+            skipped += 1
+            continue
+
+        if latest:
+            from datetime import timedelta
+            next_day = (datetime.strptime(latest, '%Y-%m-%d') + timedelta(days=1)).strftime('%Y%m%d')
+        else:
+            next_day = START_DATE
+
+        prev_close = existing_index[-1].get('close') if existing_index else None
+
+        new_data = crawl_concept_index(name, start_date=next_day, prev_close=prev_close)
+
+        if new_data:
+            merged_index = existing_index + new_data
+            existing_map[code] = {
+                'concept_name': name,
+                'concept_ts_code': code,
+                'daily_index': merged_index,
+            }
+            updated += 1
+            logger.info(f"[{idx+1}/{total}] {name}: 追加 {len(new_data)} 条, 累计 {len(merged_index)} 条")
+        elif not existing_index:
+            existing_map[code] = {
+                'concept_name': name,
+                'concept_ts_code': code,
+                'daily_index': [],
+            }
 
         if (idx + 1) % BATCH_PAUSE_SIZE == 0:
             delay = random.uniform(*BATCH_PAUSE_DELAY)
             logger.info(f"--- 已处理{idx+1}个，暂停{delay:.1f}秒 ---")
             time.sleep(delay)
 
-    save_json(os.path.join(DATA_DIR, 'concept_sectors.json'), all_data)
-    logger.info(f"概念板块完成: {len(all_data)} 个，保存到 concept_sectors.json")
+    save_json(output_file, list(existing_map.values()))
+    logger.info(f"概念板块完成: 更新 {updated}, 跳过 {skipped}, 共 {total}")
 
 
 # ==================== 主入口 ====================
