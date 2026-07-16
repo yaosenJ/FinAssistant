@@ -5,9 +5,14 @@
 数据源: 同花顺 (THS)，与板块行情数据统一
 
 用法:
-    python crawl_sector_cons_ths.py industry    # 只爬行业板块
-    python crawl_sector_cons_ths.py concept     # 只爬概念板块
-    python crawl_sector_cons_ths.py all         # 全部
+    python crawl_sector_cons_ths.py industry          # 增量爬行业板块（跳过已完成）
+    python crawl_sector_cons_ths.py concept           # 增量爬概念板块（跳过已完成）
+    python crawl_sector_cons_ths.py all               # 增量爬全部
+    python crawl_sector_cons_ths.py industry --full   # 全量重爬行业板块
+    python crawl_sector_cons_ths.py all --full        # 全量重爬全部
+
+增量模式（默认）: 加载已有输出文件，跳过 stock_count > 0 的板块，只爬缺失和失败的。
+每爬5个板块自动保存一次，防止中途失败丢数据。
 """
 
 import json
@@ -143,13 +148,53 @@ def create_browser():
     return ChromiumPage(co)
 
 
-def crawl_sector_list(sector_list, board_type, output_file):
-    """通用板块成分股爬取，自动重启浏览器"""
-    all_data = []
-    total = len(sector_list)
-    page = create_browser()
+def load_existing_data(output_file):
+    """加载已有数据，返回 {板块code: 数据} 的字典"""
+    filepath = os.path.join(DATA_DIR, output_file)
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return {item['code']: item for item in data}
+        except Exception as e:
+            logger.warning(f"加载已有数据失败: {e}")
+    return {}
 
-    for idx, sector in enumerate(sector_list):
+
+def crawl_sector_list(sector_list, board_type, output_file, incremental=True):
+    """通用板块成分股爬取，支持增量模式，自动重启浏览器
+
+    Args:
+        incremental: 增量模式，跳过已有数据且 stock_count > 0 的板块
+    """
+    existing = load_existing_data(output_file) if incremental else {}
+
+    # 增量模式：筛选需要爬取的板块
+    if incremental:
+        todo_sectors = []
+        skipped = 0
+        for sector in sector_list:
+            code = sector['code']
+            if code in existing and existing[code].get('stock_count', 0) > 0:
+                skipped += 1
+            else:
+                todo_sectors.append(sector)
+        logger.info(f"增量模式: 共{len(sector_list)}个板块, 跳过{skipped}个已完成, 待爬{len(todo_sectors)}个")
+    else:
+        todo_sectors = sector_list
+        logger.info(f"全量模式: 共{len(todo_sectors)}个板块")
+
+    if not todo_sectors:
+        logger.info("无待爬取板块，跳过")
+        return
+
+    # 保留已有数据
+    all_data = dict(existing)
+    total = len(todo_sectors)
+    page = create_browser()
+    crawled = 0
+
+    for idx, sector in enumerate(todo_sectors):
         # 定期重启浏览器
         if idx > 0 and idx % RESTART_BROWSER_EVERY == 0:
             page.quit()
@@ -166,15 +211,22 @@ def crawl_sector_list(sector_list, board_type, output_file):
                 'stock_count': len(stocks),
                 'stocks': stocks,
             }
-            all_data.append(info)
+            all_data[sector['code']] = info
+            crawled += 1
             logger.info(f"[{idx+1}/{total}] {sector['name']}: {len(stocks)} 只成分股")
 
+            # 每爬完一个就保存，防止中途失败丢数据
+            if crawled % 5 == 0:
+                save_json(os.path.join(DATA_DIR, output_file), list(all_data.values()))
+
             # 连续多个板块返回0，提前重启浏览器
-            if len(stocks) == 0 and idx > 0 and all_data[-2]['stock_count'] == 0:
-                logger.warning("连续空结果，提前重启浏览器")
-                page.quit()
-                time.sleep(random.uniform(5, 10))
-                page = create_browser()
+            if len(stocks) == 0 and idx > 0:
+                prev_key = todo_sectors[idx-1]['code']
+                if all_data.get(prev_key, {}).get('stock_count', 0) == 0:
+                    logger.warning("连续空结果，提前重启浏览器")
+                    page.quit()
+                    time.sleep(random.uniform(5, 10))
+                    page = create_browser()
 
         except Exception as e:
             logger.error(f"[{idx+1}/{total}] {sector['name']} 失败: {e}")
@@ -185,8 +237,8 @@ def crawl_sector_list(sector_list, board_type, output_file):
             time.sleep(delay)
 
     page.quit()
-    save_json(os.path.join(DATA_DIR, output_file), all_data)
-    logger.info(f"完成: {len(all_data)} 个板块，保存到 {output_file}")
+    save_json(os.path.join(DATA_DIR, output_file), list(all_data.values()))
+    logger.info(f"完成: 新增{crawled}个, 累计{len(all_data)}个板块, 保存到 {output_file}")
 
 
 def load_industry_list():
@@ -213,32 +265,41 @@ def load_concept_list():
     return [{'name': str(row['name']).strip(), 'code': str(row['code']).strip()} for _, row in sectors.iterrows()]
 
 
-def crawl_all_industry():
+def crawl_all_industry(incremental=True):
     """爬取全部行业板块成分股"""
     logger.info("加载行业板块列表...")
     sector_list = load_industry_list()
     logger.info(f"行业板块: {len(sector_list)} 个")
-    crawl_sector_list(sector_list, 'thshy', 'industry_cons.json')
+    crawl_sector_list(sector_list, 'thshy', 'industry_cons.json', incremental=incremental)
 
 
-def crawl_all_concept():
+def crawl_all_concept(incremental=True):
     """爬取全部概念板块成分股"""
     logger.info("加载概念板块列表...")
     sector_list = load_concept_list()
     logger.info(f"概念板块: {len(sector_list)} 个")
-    crawl_sector_list(sector_list, 'gn', 'concept_cons.json')
+    crawl_sector_list(sector_list, 'gn', 'concept_cons.json', incremental=incremental)
 
 
 def main():
-    target = sys.argv[1] if len(sys.argv) > 1 else 'all'
+    # 解析参数: python crawl_sector_cons_ths.py [industry|concept|all] [--full]
+    args = sys.argv[1:]
+    full_mode = '--full' in args
+    args = [a for a in args if a != '--full']
+    target = args[0] if args else 'all'
+
     if target not in ('industry', 'concept', 'all'):
-        print("用法: python crawl_sector_cons_ths.py [industry|concept|all]")
+        print("用法: python crawl_sector_cons_ths.py [industry|concept|all] [--full]")
+        print("  默认增量模式，--full 为全量模式")
         sys.exit(1)
 
+    incremental = not full_mode
+    logger.info(f"模式: {'全量' if full_mode else '增量'}")
+
     if target in ('industry', 'all'):
-        crawl_all_industry()
+        crawl_all_industry(incremental=incremental)
     if target in ('concept', 'all'):
-        crawl_all_concept()
+        crawl_all_concept(incremental=incremental)
 
     logger.info("全部完成!")
 
