@@ -6,13 +6,10 @@ MySQL 数据库连接工具
 
 import pymysql
 
-DB_CONFIG = {
-    'host': 'rm-2ze5t97h00ik9az147o.mysql.rds.aliyuncs.com',
-    'user': 'root',
-    'password': 'root@101',
-    'database': 'market_data',
-    'charset': 'utf8mb4',
-}
+try:
+    from tools.local_config import DB_CONFIG
+except ImportError:
+    from local_config import DB_CONFIG
 
 
 def get_connection():
