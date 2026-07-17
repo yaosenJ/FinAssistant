@@ -1,4 +1,28 @@
-# FinAssistant — 金融智能体项目
+<p align="center">
+  <img
+    src="./logo.svg"
+    alt="FinAssistant Logo"
+    width="160"
+  />
+</p>
+
+<h1 align="center">FinAssistant — 金融智能体项目</h1>
+
+<p align="center">
+  <strong>基于 A 股全量数据的 RAG 检索与智能体应用系统</strong>
+</p>
+
+<p align="center">
+  <a href="#一项目背景">项目背景</a> •
+  <a href="#二待开发功能模块">功能模块</a> •
+  <a href="#三数据资产">数据资产</a> •
+  <a href="#四agentscope-20-智能体实现思路">智能体实现</a> •
+  <a href="#54-已实现工具">已实现工具</a>
+</p>
+
+---
+
+
 
 ## 一、项目背景
 
@@ -52,10 +76,10 @@ A 股市场数据维度多、信息量大，散户和中小机构难以高效整
 ```
 
 **待开发**：
-- [ ] `tools/stock_fundamental.py` — 基本面指标计算工具
+- [x] `tools/stock_fundamental.py` — 基本面指标计算工具（已完成）
 - [ ] `tools/stock_valuation.py` — 估值分位分析工具
 - [ ] `tools/stock_technical.py` — 技术指标计算工具
-- [ ] `agents/stock_agent.py` — 个股分析 Agent 编排
+- [ ] `agents/stock_agent.py` — 个股分析 Agent 
 
 ---
 
@@ -701,7 +725,57 @@ async def init_agent():
 
 FastAPI 服务，提供 OpenAI 兼容的 `/v1/chat/completions` 接口。
 
-### 5.4 工具函数与已有代码的对照
+### 5.4 已实现工具
+
+#### tools/stock_fundamental.py — 基本面指标计算工具
+
+从 MySQL `market_data.stock_financial` 表获取三大财务报表数据，计算基本面指标。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `calc_fundamental_indicators(ts_code, report_date=None)` | 计算单期基本面指标 |
+| `calc_fundamental_trend(ts_code, periods=4)` | 计算最近N期指标趋势 |
+| `get_financial_data(ts_code, report_date=None)` | 获取三张报表原始数据 |
+| `get_report_dates(ts_code, limit=8)` | 获取报告日列表 |
+
+**计算指标**：
+
+| 指标 | 公式 | 数据来源 |
+|------|------|----------|
+| ROE（净资产收益率） | 归母净利润 / 归母股东权益 × 100% | 利润表 + 资产负债表 |
+| 毛利率 | (营业收入 - 营业成本) / 营业收入 × 100% | 利润表 |
+| 净利率 | 净利润 / 营业收入 × 100% | 利润表 |
+| 资产负债率 | 负债合计 / 资产总计 × 100% | 资产负债表 |
+| 经营现金流净利润比 | 经营活动现金流净额 / 净利润 | 现金流量表 + 利润表 |
+| 营收同比增长率 | (本期营收 - 上年同期营收) / \|上年同期\| × 100% | 利润表(两期累计) |
+| 净利润同比增长率 | (本期净利 - 上年同期净利) / \|上年同期\| × 100% | 利润表(两期累计) |
+| 营收环比增长率 | (本季单季营收 - 上季单季营收) / \|上季\| × 100% | 利润表(拆分单季) |
+| 净利润环比增长率 | (本季单季净利 - 上季单季净利) / \|上季\| × 100% | 利润表(拆分单季) |
+
+**特殊处理**：
+- **银行股自动识别**：通过资产负债表特征字段（发放贷款及垫款净额、客户存款）判断
+- **银行股字段映射**：营业收入 = 净利息收入 + 手续费及佣金净收入；营业成本 = 利息支出 + 手续费及佣金支出
+- **同比计算**：直接用累计值对比上年同季报（2026Q1 vs 2025Q1）
+- **环比计算**：先拆分单季数据再对比（Q4单季 = 年报累计 - 三季报累计）
+
+**使用示例**：
+
+```python
+from tools.stock_fundamental import calc_fundamental_indicators, calc_fundamental_trend
+
+# 计算单期指标
+result = calc_fundamental_indicators('600519.SH')
+print(result['ROE'], result['毛利率'], result['营收同比增长率'])
+
+# 计算趋势（最近4期）
+trend = calc_fundamental_trend('600519.SH', periods=4)
+for t in trend['trend']:
+    print(t['report_date'], t['ROE'], t['营收同比增长率'])
+```
+
+### 5.5 工具函数与已有代码的对照
 
 | 现有 langgraph_getdata/ | 新 tools/ | 说明 |
 |---|---|---|
@@ -712,9 +786,10 @@ FastAPI 服务，提供 OpenAI 兼容的 `/v1/chat/completions` 接口。
 | `query_concept_dc_stock.py` | `sector_query.py` | 概念板块成分股 |
 | `query_fin_account.py` | `financial_query.py` | 财务报表查询 |
 | （无） | `news_query.py` | 新闻查询（新增） |
+| （无） | `stock_fundamental.py` | 基本面指标计算（已完成） |
 | （无） | `indicators.py` | 技术指标计算（新增） |
 
-### 5.5 依赖安装
+### 5.6 依赖安装
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn
