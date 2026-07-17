@@ -2,7 +2,7 @@
   <img
     src="./logo.svg"
     alt="FinAssistant Logo"
-    width="160"
+    width="180"
   />
 </p>
 
