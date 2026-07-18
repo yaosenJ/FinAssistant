@@ -1021,4 +1021,4 @@ pip install agentscope>=2.0.3 fastapi uvicorn
 
 如果这个项目对你有帮助，请点个 ⭐ 支持一下！
 
-[![Star History Chart](https://api.star-history.com/svg?repos=yaosenJ/FinAssistant&type=Date)](https://star-history.com/#yaosenJ/FinAssistant&Date)
+![Stars](https://img.shields.io/github/stars/yaosenJ/FinAssistant?style=social)
