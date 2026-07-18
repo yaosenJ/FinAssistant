@@ -747,8 +747,3 @@ pip install agentscope>=2.0.3 fastapi uvicorn
 
 ---
 
-## 6. Star History
-
-If you find this project helpful, please give it a ⭐!
-
-![Stars](https://img.shields.io/github/stars/yaosenJ/FinAssistant?style=social)

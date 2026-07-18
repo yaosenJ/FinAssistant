@@ -1017,8 +1017,3 @@ pip install agentscope>=2.0.3 fastapi uvicorn
 
 ---
 
-## 六、Star 趋势
-
-如果这个项目对你有帮助，请点个 ⭐ 支持一下！
-
-![Stars](https://img.shields.io/github/stars/yaosenJ/FinAssistant?style=social)
