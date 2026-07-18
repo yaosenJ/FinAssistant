@@ -742,17 +742,13 @@ print(calc_technical_summary('600519.SH'))
 ### 5.6 Dependencies
 
 ```bash
-pip install agentscope1.0.19.dev0>=2.0.3 fastapi uvicorn
+pip install agentscope>=2.0.3 fastapi uvicorn
 ```
 
 ---
 
 ## 6. Star History
 
-<a href="https://star-history.com/#yaosenJ/FinAssistant&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=yaosenJ/FinAssistant&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=yaosenJ/FinAssistant&type=Date&theme=light" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=yaosenJ/FinAssistant&type=Date" />
- </picture>
-</a>
+If you find this project helpful, please give it a ⭐!
+
+[![Star History Chart](https://api.star-history.com/svg?repos=yaosenJ/FinAssistant&type=Date)](https://star-history.com/#yaosenJ/FinAssistant&Date)

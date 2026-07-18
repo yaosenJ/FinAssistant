@@ -1012,17 +1012,13 @@ print(calc_technical_summary('600519.SH'))
 ### 5.6 依赖安装
 
 ```bash
-pip install agentscope1.0.19.dev0>=2.0.3 fastapi uvicorn
+pip install agentscope>=2.0.3 fastapi uvicorn
 ```
 
 ---
 
 ## 六、Star 趋势
 
-<a href="https://star-history.com/#yaosenJ/FinAssistant&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=yaosenJ/FinAssistant&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=yaosenJ/FinAssistant&type=Date&theme=light" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=yaosenJ/FinAssistant&type=Date" />
- </picture>
-</a>
+如果这个项目对你有帮助，请点个 ⭐ 支持一下！
+
+[![Star History Chart](https://api.star-history.com/svg?repos=yaosenJ/FinAssistant&type=Date)](https://star-history.com/#yaosenJ/FinAssistant&Date)
