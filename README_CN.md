@@ -82,8 +82,63 @@ A 股市场数据维度多、信息量大，散户和中小机构难以高效整
 **待开发**：
 - [x] `tools/stock_fundamental.py` — 基本面指标计算工具（已完成）
 - [x] `tools/stock_valuation.py` — 估值分位分析工具（已完成）
-- [ ] `tools/stock_technical.py` — 技术指标计算工具
-- [ ] `agents/stock_agent.py` — 个股分析 Agent 
+- [x] `tools/stock_technical.py` — 技术指标计算工具（已完成）
+- [x] `tools/stock_analysis.py` — 个股全景分析报告工具（已完成）
+- [x] `agents/stock_agent.py` — 个股分析智能体（已完成）
+
+**运行示例**：
+
+```
+$ python agents/stock_agent.py
+
+============================================================
+FinAssistant — 金融智能体
+============================================================
+输入股票代码或问题开始分析，输入 'quit' 退出
+============================================================
+
+你: 帮我分析贵州茅台的技术面走势，给出操作建议
+
+FinAssistant:
+[调用工具: reset_tools]
+[完成] 结果: The currently activated tool group(s): stock-technical.
+
+[调用工具: calc_technical_summary]
+[完成] 结果: === 600519.SH 技术指标分析 (2026-07-17) ===
+收盘价: 1253.0
+【移动平均线 MA】
+  MA5:  1237.78
+  MA10: 1217.11
+  MA20: 1204.07
+  MA60: 1263.65
+  均线趋势: 多头排列
+【MACD】
+  DIF: -0.2443
+  DEA: -11.3353
+  MACD柱: 22.182
+  信号: 金叉
+...
+
+### 贵州茅台(600519.SH)技术面分析与操作建议
+
+#### 一、核心技术指标摘要（近120天）
+| 指标类型 | 关键数据 | 信号解读 |
+|---------|---------|---------|
+| **均线系统** | MA5:1237.78, MA10:1217.11, MA20:1204.07, MA60:1263.65 | 短期均线多头排列，股价略低于MA60 |
+| **MACD** | DIF:-0.24, DEA:-11.34, MACD柱:22.18 | 低位金叉形成，短期反弹信号明确 |
+| **RSI** | RSI(6):92.76, RSI(12):68.80, RSI(24):48.73 | 短期RSI严重超买（>90），警惕回调风险 |
+| **布林带** | 上轨:1252.21, 中轨:1204.07, 下轨:1155.92 | 股价突破上轨，处于强势区间 |
+| **KDJ** | K:84.30, D:79.20, J:94.49 | 高位金叉，短期上涨动能充足 |
+
+#### 二、综合研判
+技术面呈现**强趋势与短期超买并存**的格局
+
+#### 三、操作建议
+1. **持仓投资者**：继续持有为主，可将MA20（1204.07）作为止损线
+2. **观望投资者**：等待回调至关键支撑位（MA20:1204或布林中轨:1204）再考虑进场
+
+⚠️ **风险提示**：技术分析仅供参考，不构成投资建议。
+```
 
 ---
 
@@ -879,6 +934,66 @@ print(calc_valuation_summary('600519.SH'))
   历史区间: 17.93 - 29.69（均值22.66）
 ```
 
+---
+
+#### tools/stock_technical.py — 技术指标计算工具
+
+从 MySQL `market_data.stock_kline` 表获取 OHLCV 数据，计算 MA/MACD/RSI/BOLL/KDJ 技术指标。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `calc_technical_indicators(ts_code, days=120)` | 计算全部技术指标 |
+| `calc_technical_summary(ts_code, days=120)` | 生成格式化摘要 |
+| `get_kline_data(ts_code, days=120)` | 从MySQL获取K线数据 |
+
+**技术指标**：
+
+| 指标 | 公式 | 选股用途 |
+|------|------|----------|
+| MA(5/10/20/60) | 最近N日收盘价的算术平均值 | 趋势判断：股价在MA之上为多头；金叉/死叉为买卖信号 |
+| MACD | DIF=EMA(12)-EMA(26); DEA=DIF的9日EMA; 柱=(DIF-DEA)×2 | DIF上穿DEA为金叉（买入）；下穿为死叉（卖出） |
+| RSI(6/12/24) | RS=N日平均涨幅/N日平均跌幅; RSI=100-100/(1+RS) | >80超买（可能回调）；<20超卖（可能反弹） |
+| BOLL(20,2) | 中轨=MA(20); 上轨=MA+2σ; 下轨=MA-2σ | 触及上轨可能回调；触及下轨可能反弹 |
+| KDJ(9,3,3) | RSV, K=2/3K+1/3RSV, D=2/3D+1/3K, J=3K-2D | K>80超买；K<20超卖；K/D交叉为买卖信号 |
+
+**信号解读**：
+
+| 信号 | MA | MACD | RSI | BOLL | KDJ |
+|------|-----|------|-----|------|-----|
+| 看多 | MA5>MA10>MA20（多头排列） | DIF>DEA, MACD柱>0 | RSI<20（超卖） | 股价触及下轨后反弹 | K/D金叉且在超卖区 |
+| 看空 | MA5<MA10<MA20（空头排列） | DIF<DEA, MACD柱<0 | RSI>80（超买） | 股价触及上轨后回落 | K/D死叉且在超买区 |
+
+**多指标综合研判**：
+
+买入信号（至少满足2-3个）：
+- ✓ 股价站上MA20，MA金叉（MA5>MA10>MA20）
+- ✓ MACD金叉（DIF上穿DEA），且MACD柱转正
+- ✓ RSI从超卖区回升（<20 → >20）
+- ✓ 股价触及布林带下轨后反弹
+- ✓ KDJ金叉（K上穿D），且在超卖区
+
+卖出信号（至少满足2-3个）：
+- ✗ 股价跌破MA20，MA死叉（MA5<MA10<MA20）
+- ✗ MACD死叉（DIF下穿DEA），且MACD柱转负
+- ✗ RSI进入超买区（>80）后回落
+- ✗ 股价触及布林带上轨后回落
+- ✗ KDJ死叉（K下穿D），且在超买区
+
+**使用示例**：
+
+```python
+from tools.stock_technical import calc_technical_indicators, calc_technical_summary
+
+# 获取结构化数据
+result = calc_technical_indicators('600519.SH')
+print(f"收盘价: {result['close']}, MA5: {result['ma5']}, MACD信号: {result['macd_signal']}")
+
+# 获取格式化摘要
+print(calc_technical_summary('600519.SH'))
+```
+
 ### 5.5 工具函数与已有代码的对照
 
 | 现有 langgraph_getdata/ | 新 tools/ | 说明 |
@@ -892,10 +1007,10 @@ print(calc_valuation_summary('600519.SH'))
 | （无） | `news_query.py` | 新闻查询（新增） |
 | （无） | `stock_fundamental.py` | 基本面指标计算（已完成） |
 | （无） | `stock_valuation.py` | 估值分位分析（已完成） |
-| （无） | `indicators.py` | 技术指标计算（新增） |
+| （无） | `stock_technical.py` | 技术指标计算（已完成） |
 
 ### 5.6 依赖安装
 
 ```bash
-pip install agentscope>=2.0.3 fastapi uvicorn
+pip install agentscope1.0.19.dev0>=2.0.3 fastapi uvicorn
 ```

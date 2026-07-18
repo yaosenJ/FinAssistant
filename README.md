@@ -80,8 +80,63 @@ Six intelligent agent modules planned based on existing data assets:
 **To-Do**:
 - [x] `tools/stock_fundamental.py` — Fundamental indicator calculator (Done)
 - [x] `tools/stock_valuation.py` — Valuation percentile analyzer (Done)
-- [ ] `tools/stock_technical.py` — Technical indicator calculator
-- [ ] `agents/stock_agent.py` — Stock analysis agent
+- [x] `tools/stock_technical.py` — Technical indicator calculator (Done)
+- [x] `tools/stock_analysis.py` — Comprehensive stock analysis report (Done)
+- [x] `agents/stock_agent.py` — Stock analysis agent (Done)
+
+**Agent Demo**:
+
+```
+$ python agents/stock_agent.py
+
+============================================================
+FinAssistant — 金融智能体
+============================================================
+输入股票代码或问题开始分析，输入 'quit' 退出
+============================================================
+
+你: 帮我分析贵州茅台的技术面走势，给出操作建议
+
+FinAssistant:
+[调用工具: reset_tools]
+[完成] 结果: The currently activated tool group(s): stock-technical.
+
+[调用工具: calc_technical_summary]
+[完成] 结果: === 600519.SH 技术指标分析 (2026-07-17) ===
+收盘价: 1253.0
+【移动平均线 MA】
+  MA5:  1237.78
+  MA10: 1217.11
+  MA20: 1204.07
+  MA60: 1263.65
+  均线趋势: 多头排列
+【MACD】
+  DIF: -0.2443
+  DEA: -11.3353
+  MACD柱: 22.182
+  信号: 金叉
+...
+
+### 贵州茅台(600519.SH)技术面分析与操作建议
+
+#### 一、核心技术指标摘要（近120天）
+| 指标类型 | 关键数据 | 信号解读 |
+|---------|---------|---------|
+| **均线系统** | MA5:1237.78, MA10:1217.11, MA20:1204.07, MA60:1263.65 | 短期均线多头排列，股价略低于MA60 |
+| **MACD** | DIF:-0.24, DEA:-11.34, MACD柱:22.18 | 低位金叉形成，短期反弹信号明确 |
+| **RSI** | RSI(6):92.76, RSI(12):68.80, RSI(24):48.73 | 短期RSI严重超买（>90），警惕回调风险 |
+| **布林带** | 上轨:1252.21, 中轨:1204.07, 下轨:1155.92 | 股价突破上轨，处于强势区间 |
+| **KDJ** | K:84.30, D:79.20, J:94.49 | 高位金叉，短期上涨动能充足 |
+
+#### 二、综合研判
+技术面呈现**强趋势与短期超买并存**的格局
+
+#### 三、操作建议
+1. **持仓投资者**：继续持有为主，可将MA20（1204.07）作为止损线
+2. **观望投资者**：等待回调至关键支撑位（MA20:1204或布林中轨:1204）再考虑进场
+
+⚠️ **风险提示**：技术分析仅供参考，不构成投资建议。
+```
 
 ---
 
@@ -609,6 +664,66 @@ print(f"PE_TTM: {result['pe_ttm']}, Percentile: {result['pe_ttm_percentile']}%, 
 print(calc_valuation_summary('600519.SH'))
 ```
 
+---
+
+### tools/stock_technical.py — Technical Indicator Calculator
+
+Calculates MA/MACD/RSI/BOLL/KDJ indicators from MySQL `market_data.stock_kline` table.
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `calc_technical_indicators(ts_code, days=120)` | Calculate all technical indicators |
+| `calc_technical_summary(ts_code, days=120)` | Generate formatted summary |
+| `get_kline_data(ts_code, days=120)` | Get K-line data from MySQL |
+
+**Technical Indicators**:
+
+| Indicator | Formula | Usage |
+|-----------|---------|-------|
+| MA(5/10/20/60) | Average of last N closing prices | Trend: Price above MA = bullish; MA crossover = buy/sell signal |
+| MACD | DIF = EMA(12) - EMA(26); DEA = EMA(DIF,9); Histogram = (DIF-DEA)×2 | Golden cross (DIF>DEA) = buy; Dead cross = sell |
+| RSI(6/12/24) | RS = Avg Gain / Avg Loss; RSI = 100 - 100/(1+RS) | >80 = overbought; <20 = oversold |
+| BOLL(20,2) | Upper = MA+2σ; Middle = MA; Lower = MA-2σ | Touch upper = overbought; Touch lower = oversold |
+| KDJ(9,3,3) | RSV, K = 2/3K+1/3RSV, D = 2/3D+1/3K, J = 3K-2D | K>80 = overbought; K<20 = oversold; K/D crossover |
+
+**Signal Interpretation**:
+
+| Signal | MA | MACD | RSI | BOLL | KDJ |
+|--------|-----|------|-----|------|-----|
+| Bullish | MA5>MA10>MA20 (Bull alignment) | DIF>DEA, Histogram>0 | RSI<20 (Oversold) | Price bounces off lower band | K/D golden cross in oversold zone |
+| Bearish | MA5<MA10<MA20 (Bear alignment) | DIF<DEA, Histogram<0 | RSI>80 (Overbought) | Price falls from upper band | K/D dead cross in overbought zone |
+
+**Multi-indicator Confirmation**:
+
+Buy signals (need 2-3):
+- Price above MA20, MA bullish alignment (MA5>MA10>MA20)
+- MACD golden cross (DIF crosses above DEA)
+- RSI rebounds from oversold (<20 → >20)
+- Price bounces off Bollinger lower band
+- KDJ golden cross in oversold zone
+
+Sell signals (need 2-3):
+- Price below MA20, MA bearish alignment (MA5<MA10<MA20)
+- MACD dead cross (DIF crosses below DEA)
+- RSI enters overbought (>80) then falls
+- Price falls from Bollinger upper band
+- KDJ dead cross in overbought zone
+
+**Usage**:
+
+```python
+from tools.stock_technical import calc_technical_indicators, calc_technical_summary
+
+# Get structured data
+result = calc_technical_indicators('600519.SH')
+print(f"Close: {result['close']}, MA5: {result['ma5']}, MACD: {result['macd_signal']}")
+
+# Get formatted summary
+print(calc_technical_summary('600519.SH'))
+```
+
 ### 5.5 Tool Function Mapping
 
 | Existing langgraph_getdata/ | New tools/ | Description |
@@ -622,10 +737,10 @@ print(calc_valuation_summary('600519.SH'))
 | (None) | `news_query.py` | News query (New) |
 | (None) | `stock_fundamental.py` | Fundamental indicators (Done) |
 | (None) | `stock_valuation.py` | Valuation percentile (Done) |
-| (None) | `indicators.py` | Technical indicators (New) |
+| (None) | `stock_technical.py` | Technical indicators (Done) |
 
 ### 5.6 Dependencies
 
 ```bash
-pip install agentscope>=2.0.3 fastapi uvicorn
+pip install agentscope1.0.19.dev0>=2.0.3 fastapi uvicorn
 ```
