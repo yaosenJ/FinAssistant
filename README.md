@@ -193,9 +193,10 @@ FinAssistant:
 ```
 
 **To-Do**:
-- [ ] `tools/sector_ranking.py` — Sector ranking tool
-- [ ] `tools/sector_rotation.py` — Rotation trend identifier
-- [ ] `tools/sector_compare.py` — Sector comparison tool
+- [x] `tools/sector_ranking.py` — Sector ranking tool (Done)
+- [x] `tools/sector_rotation.py` — Rotation trend identifier (Done)
+- [x] `tools/sector_compare.py` — Sector comparison tool (Done)
+- [x] `tools/sector_detail.py` — Sector deep analysis tool (Done)
 - [ ] `agents/sector_agent.py` — Sector analysis agent
 
 ---
@@ -753,7 +754,123 @@ print(f"Close: {result['close']}, MA5: {result['ma5']}, MACD: {result['macd_sign
 print(calc_technical_summary('600519.SH'))
 ```
 
-### 5.5 Tool Function Mapping
+### 5.5 Sector Analysis Tools
+
+#### tools/sector_ranking.py — Sector Ranking Tool
+
+Calculates sector rankings from MySQL `sector_industry_daily` / `sector_concept_daily` tables.
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `get_sector_ranking(sector_type, trade_date, top_n, sort_by)` | Sector ranking by pct_chg/amount/volume |
+| `get_sector_top_gainers(sector_type, days, top_n)` | Sectors with consecutive N-day gains |
+| `get_sector_top_losers(sector_type, days, top_n)` | Sectors with consecutive N-day losses |
+| `get_sector_summary(sector_type, trade_date)` | Market overview (advance/decline, limit up/down) |
+
+**Usage**:
+
+```python
+from tools.sector_ranking import get_sector_ranking, get_sector_top_gainers, get_sector_summary
+
+# Top 10 industry sectors by pct_chg
+print(get_sector_ranking(sector_type='industry', top_n=10))
+
+# Sectors rising for 3 consecutive days
+print(get_sector_top_gainers(sector_type='industry', days=3))
+
+# Industry sector market overview
+print(get_sector_summary(sector_type='industry'))
+```
+
+---
+
+#### tools/sector_rotation.py — Rotation Trend Identifier
+
+Analyzes sector momentum and capital rotation direction through short-term vs medium-term performance comparison.
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `get_sector_momentum(sector_type, short_days, long_days, top_n)` | Momentum analysis — short vs medium term, momentum score |
+| `get_sector_rotation(sector_type, short_days, long_days, top_n)` | Rotation identification — capital inflow/outflow sectors |
+| `get_sector_strength(sector_type, days, top_n)` | Strength ranking — composite score of gains, up-days, volume |
+| `get_hot_cold_sectors(sector_type, days)` | Hot/cold classification — hot/warm/flat/cold categories |
+
+**Usage**:
+
+```python
+from tools.sector_rotation import get_sector_momentum, get_sector_rotation, get_hot_cold_sectors
+
+# Industry sector momentum (3-day short vs 10-day medium)
+print(get_sector_momentum(sector_type='industry', short_days=3, long_days=10))
+
+# Sector rotation (capital inflow/outflow)
+print(get_sector_rotation(sector_type='industry'))
+
+# Hot/cold sector classification
+print(get_hot_cold_sectors(sector_type='industry', days=5))
+```
+
+---
+
+#### tools/sector_compare.py — Sector Comparison Tool
+
+Multi-sector price curve overlay comparison with normalization and ASCII trend charts.
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `compare_sectors(sector_names, sector_type, days)` | Multi-sector cumulative return comparison (table + ASCII chart) |
+| `compare_sector_trend(sector_names, sector_type, days)` | Trend strength comparison with conclusion |
+
+**Usage**:
+
+```python
+from tools.sector_compare import compare_sectors, compare_sector_trend
+
+# Compare Baijiu vs Power vs Banks over 20 days
+print(compare_sectors(['白酒', '电力', '银行'], sector_type='industry', days=20))
+
+# Trend strength comparison with conclusion
+print(compare_sector_trend(['白酒', '电力', '银行', '证券'], days=20))
+```
+
+---
+
+#### tools/sector_detail.py — Sector Deep Analysis Tool
+
+Links constituent stock data to provide internal sector structure analysis.
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `get_constituent_distribution(sector_name, sector_type, trade_date)` | Constituent distribution — advance/decline, limit up/down, median change, top/bottom 5 |
+| `get_sector_money_flow(sector_name, sector_type, days)` | Capital flow analysis — volume trend, price-volume coordination, inflow/outflow |
+| `get_sector_correlation(sector_name1, sector_name2, sector_type)` | Sector correlation — Jaccard coefficient, overlapping constituents |
+
+**Usage**:
+
+```python
+from tools.sector_detail import get_constituent_distribution, get_sector_money_flow, get_sector_correlation
+
+# Baijiu sector constituent distribution
+print(get_constituent_distribution('白酒', sector_type='industry'))
+
+# Power sector capital flow analysis
+print(get_sector_money_flow('电力', sector_type='industry', days=10))
+
+# Baijiu vs Beer sector correlation
+print(get_sector_correlation('白酒', '啤酒', sector_type='industry'))
+```
+
+---
+
+### 5.6 Tool Function Mapping
 
 | Existing langgraph_getdata/ | New tools/ | Description |
 |---|---|---|
@@ -768,7 +885,7 @@ print(calc_technical_summary('600519.SH'))
 | (None) | `stock_valuation.py` | Valuation percentile (Done) |
 | (None) | `stock_technical.py` | Technical indicators (Done) |
 
-### 5.6 Dependencies
+### 5.7 Dependencies
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn
