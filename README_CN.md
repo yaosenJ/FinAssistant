@@ -195,9 +195,10 @@ FinAssistant:
 ```
 
 **待开发**：
-- [ ] `tools/sector_ranking.py` — 板块排名工具
-- [ ] `tools/sector_rotation.py` — 轮动趋势识别工具
-- [ ] `tools/sector_compare.py` — 板块对比工具
+- [x] `tools/sector_ranking.py` — 板块排名工具（已完成）
+- [x] `tools/sector_rotation.py` — 轮动趋势识别工具（已完成）
+- [x] `tools/sector_compare.py` — 板块对比工具（已完成）
+- [x] `tools/sector_detail.py` — 板块深度分析工具（已完成）
 - [ ] `agents/sector_agent.py` — 板块分析 Agent 编排
 
 ---
@@ -1023,7 +1024,123 @@ print(f"收盘价: {result['close']}, MA5: {result['ma5']}, MACD信号: {result[
 print(calc_technical_summary('600519.SH'))
 ```
 
-### 5.5 工具函数与已有代码的对照
+### 5.5 板块分析工具
+
+#### tools/sector_ranking.py — 板块排名工具
+
+从 MySQL `sector_industry_daily` / `sector_concept_daily` 表获取板块数据，计算排名。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `get_sector_ranking(sector_type, trade_date, top_n, sort_by)` | 板块涨跌幅/成交额/成交量排名 |
+| `get_sector_top_gainers(sector_type, days, top_n)` | 连续N天上涨的板块 |
+| `get_sector_top_losers(sector_type, days, top_n)` | 连续N天下跌的板块 |
+| `get_sector_summary(sector_type, trade_date)` | 板块市场概览（涨跌家数、涨跌停等） |
+
+**使用示例**：
+
+```python
+from tools.sector_ranking import get_sector_ranking, get_sector_top_gainers, get_sector_summary
+
+# 行业板块涨跌幅排名 Top 10
+print(get_sector_ranking(sector_type='industry', top_n=10))
+
+# 连续3天上涨的行业板块
+print(get_sector_top_gainers(sector_type='industry', days=3))
+
+# 行业板块市场概览
+print(get_sector_summary(sector_type='industry'))
+```
+
+---
+
+#### tools/sector_rotation.py — 轮动趋势识别工具
+
+通过短期vs中期涨幅对比，分析板块动量和资金轮动方向。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `get_sector_momentum(sector_type, short_days, long_days, top_n)` | 动量分析 — 短期vs中期涨幅，计算动量评分 |
+| `get_sector_rotation(sector_type, short_days, long_days, top_n)` | 轮动识别 — 资金流入/流出板块 |
+| `get_sector_strength(sector_type, days, top_n)` | 强度排名 — 综合涨幅、上涨天数、成交额评分 |
+| `get_hot_cold_sectors(sector_type, days)` | 冷热分类 — 热门/温热/平淡/冷门四类 |
+
+**使用示例**：
+
+```python
+from tools.sector_rotation import get_sector_momentum, get_sector_rotation, get_hot_cold_sectors
+
+# 行业板块动量分析（短期3日 vs 中期10日）
+print(get_sector_momentum(sector_type='industry', short_days=3, long_days=10))
+
+# 板块轮动识别（资金流入/流出）
+print(get_sector_rotation(sector_type='industry'))
+
+# 冷热板块分类
+print(get_hot_cold_sectors(sector_type='industry', days=5))
+```
+
+---
+
+#### tools/sector_compare.py — 板块对比工具
+
+多板块同期涨跌曲线叠加对比，支持归一化处理和 ASCII 趋势图。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `compare_sectors(sector_names, sector_type, days)` | 多板块累计涨跌对比（表格 + ASCII图） |
+| `compare_sector_trend(sector_names, sector_type, days)` | 趋势强度对比（含强弱结论） |
+
+**使用示例**：
+
+```python
+from tools.sector_compare import compare_sectors, compare_sector_trend
+
+# 白酒 vs 电力 vs 银行 20日涨跌曲线对比
+print(compare_sectors(['白酒', '电力', '银行'], sector_type='industry', days=20))
+
+# 趋势强度对比（含强弱结论）
+print(compare_sector_trend(['白酒', '电力', '银行', '证券'], days=20))
+```
+
+---
+
+#### tools/sector_detail.py — 板块深度分析工具
+
+关联成分股数据，提供板块内部结构分析。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `get_constituent_distribution(sector_name, sector_type, trade_date)` | 成分股涨跌分布 — 涨跌家数、涨跌停、中位涨幅、涨跌幅前后5名 |
+| `get_sector_money_flow(sector_name, sector_type, days)` | 资金流向分析 — 成交额趋势、量价配合、流入/流出判断 |
+| `get_sector_correlation(sector_name1, sector_name2, sector_type)` | 板块关联度 — Jaccard系数、重叠成分股列表 |
+
+**使用示例**：
+
+```python
+from tools.sector_detail import get_constituent_distribution, get_sector_money_flow, get_sector_correlation
+
+# 白酒板块成分股涨跌分布
+print(get_constituent_distribution('白酒', sector_type='industry'))
+
+# 电力板块资金流向分析
+print(get_sector_money_flow('电力', sector_type='industry', days=10))
+
+# 白酒 vs 啤酒 板块关联度
+print(get_sector_correlation('白酒', '啤酒', sector_type='industry'))
+```
+
+---
+
+### 5.6 工具函数与已有代码的对照
 
 | 现有 langgraph_getdata/ | 新 tools/ | 说明 |
 |---|---|---|
@@ -1038,7 +1155,7 @@ print(calc_technical_summary('600519.SH'))
 | （无） | `stock_valuation.py` | 估值分位分析（已完成） |
 | （无） | `stock_technical.py` | 技术指标计算（已完成） |
 
-### 5.6 依赖安装
+### 5.7 依赖安装
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn
