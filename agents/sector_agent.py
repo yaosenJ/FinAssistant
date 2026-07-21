@@ -71,7 +71,7 @@ LOG_DIR = os.path.join(PROJECT_DIR, "log")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # 模型配置（优先使用环境变量）
-DOUBAO_API_KEY = os.environ.get("DOUBAO_API_KEY", "f3266d44-ba7c-4804-8e56-8a03a82b22f9")
+DOUBAO_API_KEY = os.environ.get("DOUBAO_API_KEY", "")
 DOUBAO_BASE_URL = os.environ.get("DOUBAO_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3")
 DOUBAO_MODEL_NAME = os.environ.get("DOUBAO_MODEL_NAME", "doubao-seed-1-8-251228")
 
