@@ -58,15 +58,24 @@ def _search_sector(sector_type, keyword):
         with conn.cursor() as cursor:
             cursor.execute(f"""
                 SELECT DISTINCT sector_code, sector_name FROM {table}
-                WHERE sector_name LIKE %s LIMIT 5
+                WHERE sector_name LIKE %s
             """, (f'%{keyword}%',))
             matches = cursor.fetchall()
             if not matches:
                 return None
             exact = [m for m in matches if m[1] == keyword]
-            return exact[0] if exact else matches[0]
+            return exact[0] if exact else matches
     finally:
         conn.close()
+
+
+def _format_candidates(matches, keyword, sector_type):
+    """格式化多个匹配结果，提示用户澄清"""
+    type_name = '行业' if sector_type == 'industry' else '概念'
+    result = f"关键词 \"{keyword}\" 匹配到多个{type_name}板块，请指定具体名称：\n"
+    for code, name in matches:
+        result += f"  - {name} ({code})\n"
+    return result
 
 
 def _get_constituents(sector_code, sector_type):
@@ -268,6 +277,8 @@ def get_sector_financial_agg(sector_name, sector_type='industry'):
     match = _search_sector(sector_type, sector_name)
     if not match:
         return f"未找到{type_name}板块: {sector_name}"
+    if isinstance(match, list):
+        return _format_candidates(match, sector_name, sector_type)
 
     sector_code, sector_name_real = match
 
@@ -404,6 +415,8 @@ def get_sector_valuation_stats(sector_name, sector_type='industry'):
     match = _search_sector(sector_type, sector_name)
     if not match:
         return f"未找到{type_name}板块: {sector_name}"
+    if isinstance(match, list):
+        return _format_candidates(match, sector_name, sector_type)
 
     sector_code, sector_name_real = match
 
