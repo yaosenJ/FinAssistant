@@ -199,7 +199,52 @@ FinAssistant:
 - [x] `tools/sector_rotation.py` — 轮动趋势识别工具（已完成）
 - [x] `tools/sector_compare.py` — 板块对比工具（已完成）
 - [x] `tools/sector_detail.py` — 板块深度分析工具（已完成）
-- [ ] `agents/sector_agent.py` — 板块分析 Agent 编排
+- [x] `agents/sector_agent.py` — 板块分析智能体（已完成）
+
+**运行示例**：
+
+```
+$ python agents/sector_agent.py
+
+============================================================
+FinAssistant — 板块轮动分析智能体
+============================================================
+输入板块相关问题开始分析，输入 'quit' 退出
+示例：
+  - 最近一周涨幅最大的行业板块有哪些？
+  - 半导体板块最近一个月资金是在流入还是流出？
+  - AI概念和机器人概念的成分股重叠度有多高？
+  - 今天哪些板块出现了跌停潮？
+============================================================
+
+你: 最近一周涨幅最大的行业板块有哪些？
+
+FinAssistant:
+[调用工具: get_sector_ranking]
+[完成] 结果: === 行业板块涨跌幅排名 (2026-07-17) ===
+Top 10:
+排名  板块名称    涨跌幅(%)  成交额(亿)
+1    通信设备    +5.23     312.45
+2    半导体      +4.87     528.91
+3    消费电子    +3.65     287.33
+...
+
+[调用工具: get_sector_top_gainers]
+[完成] 结果: === 连续3天上涨的行业板块 ===
+板块名称      连涨天数  累计涨幅(%)
+半导体        3        +8.92
+通信设备      3        +7.56
+...
+
+综合来看，最近一周涨幅最大的行业板块主要集中在科技领域：
+1. **通信设备** (+5.23%) — 5G建设持续推进，板块领涨
+2. **半导体** (+4.87%) — 国产替代逻辑强化，资金持续流入
+3. **消费电子** (+3.65%) — 新品发布预期带动板块走强
+
+其中半导体和通信设备已连续3天上涨，短期动能较强。
+
+⚠️ 风险提示：板块轮动较快，追高需谨慎。以上分析仅供参考，不构成投资建议。
+```
 
 ---
 
@@ -226,8 +271,8 @@ FinAssistant:
 ```
 
 **待开发**：
-- [ ] `tools/stock_sector_mapping.py` — 个股-板块映射工具
-- [ ] `tools/sector_financial_agg.py` — 板块财务聚合工具
+- [x] `tools/stock_sector_mapping.py` — 个股-板块映射工具（已完成）
+- [x] `tools/sector_financial_agg.py` — 板块财务聚合工具（已完成）
 - [ ] `tools/news_stock_linker.py` — 新闻-行情关联工具
 - [ ] `agents/correlation_agent.py` — 关联分析 Agent 编排
 
@@ -1140,7 +1185,30 @@ print(get_sector_correlation('白酒', '啤酒', sector_type='industry'))
 
 ---
 
-### 5.6 工具函数与已有代码的对照
+### 5.6 板块分析智能体
+
+#### agents/sector_agent.py — 板块分析智能体
+
+整合板块排名、轮动、对比、深度分析四大工具组，提供板块轮动分析能力。
+
+**工具组划分**：
+
+| 工具组 | 工具 | 说明 |
+|--------|------|------|
+| sector-ranking | `get_sector_ranking` / `get_sector_top_gainers` / `get_sector_top_losers` / `get_sector_summary` | 板块排名 |
+| sector-rotation | `get_sector_momentum` / `get_sector_rotation` / `get_sector_strength` / `get_hot_cold_sectors` | 轮动分析 |
+| sector-compare | `compare_sectors` / `compare_sector_trend` | 板块对比 |
+| sector-detail | `get_constituent_distribution` / `get_sector_money_flow` / `get_sector_correlation` | 深度分析 |
+
+**运行方式**：
+
+```bash
+python agents/sector_agent.py
+```
+
+---
+
+### 5.7 工具函数与已有代码的对照
 
 | 现有 langgraph_getdata/ | 新 tools/ | 说明 |
 |---|---|---|
@@ -1155,7 +1223,7 @@ print(get_sector_correlation('白酒', '啤酒', sector_type='industry'))
 | （无） | `stock_valuation.py` | 估值分位分析（已完成） |
 | （无） | `stock_technical.py` | 技术指标计算（已完成） |
 
-### 5.7 依赖安装
+### 5.8 依赖安装
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn

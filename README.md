@@ -197,7 +197,52 @@ FinAssistant:
 - [x] `tools/sector_rotation.py` — Rotation trend identifier (Done)
 - [x] `tools/sector_compare.py` — Sector comparison tool (Done)
 - [x] `tools/sector_detail.py` — Sector deep analysis tool (Done)
-- [ ] `agents/sector_agent.py` — Sector analysis agent
+- [x] `agents/sector_agent.py` — Sector analysis agent (Done)
+
+**Agent Demo**:
+
+```
+$ python agents/sector_agent.py
+
+============================================================
+FinAssistant — 板块轮动分析智能体
+============================================================
+输入板块相关问题开始分析，输入 'quit' 退出
+示例：
+  - 最近一周涨幅最大的行业板块有哪些？
+  - 半导体板块最近一个月资金是在流入还是流出？
+  - AI概念和机器人概念的成分股重叠度有多高？
+  - 今天哪些板块出现了跌停潮？
+============================================================
+
+你: 最近一周涨幅最大的行业板块有哪些？
+
+FinAssistant:
+[调用工具: get_sector_ranking]
+[完成] 结果: === 行业板块涨跌幅排名 (2026-07-17) ===
+Top 10:
+排名  板块名称    涨跌幅(%)  成交额(亿)
+1    通信设备    +5.23     312.45
+2    半导体      +4.87     528.91
+3    消费电子    +3.65     287.33
+...
+
+[调用工具: get_sector_top_gainers]
+[完成] 结果: === 连续3天上涨的行业板块 ===
+板块名称      连涨天数  累计涨幅(%)
+半导体        3        +8.92
+通信设备      3        +7.56
+...
+
+综合来看，最近一周涨幅最大的行业板块主要集中在科技领域：
+1. **通信设备** (+5.23%) — 5G建设持续推进，板块领涨
+2. **半导体** (+4.87%) — 国产替代逻辑强化，资金持续流入
+3. **消费电子** (+3.65%) — 新品发布预期带动板块走强
+
+其中半导体和通信设备已连续3天上涨，短期动能较强。
+
+⚠️ 风险提示：板块轮动较快，追高需谨慎。以上分析仅供参考，不构成投资建议。
+```
 
 ---
 
@@ -224,8 +269,8 @@ FinAssistant:
 ```
 
 **To-Do**:
-- [ ] `tools/stock_sector_mapping.py` — Stock-sector mapping tool
-- [ ] `tools/sector_financial_agg.py` — Sector financial aggregation
+- [x] `tools/stock_sector_mapping.py` — Stock-sector mapping tool (Done)
+- [x] `tools/sector_financial_agg.py` — Sector financial aggregation (Done)
 - [ ] `tools/news_stock_linker.py` — News-quote correlation tool
 - [ ] `agents/correlation_agent.py` — Correlation analysis agent
 
@@ -870,7 +915,30 @@ print(get_sector_correlation('白酒', '啤酒', sector_type='industry'))
 
 ---
 
-### 5.6 Tool Function Mapping
+### 5.6 Sector Analysis Agent
+
+#### agents/sector_agent.py — Sector Analysis Agent
+
+Integrates sector ranking, rotation, comparison, and deep analysis tool groups for sector rotation analysis.
+
+**Tool Group Structure**:
+
+| Tool Group | Tools | Description |
+|------------|-------|-------------|
+| sector-ranking | `get_sector_ranking` / `get_sector_top_gainers` / `get_sector_top_losers` / `get_sector_summary` | Sector ranking |
+| sector-rotation | `get_sector_momentum` / `get_sector_rotation` / `get_sector_strength` / `get_hot_cold_sectors` | Rotation analysis |
+| sector-compare | `compare_sectors` / `compare_sector_trend` | Sector comparison |
+| sector-detail | `get_constituent_distribution` / `get_sector_money_flow` / `get_sector_correlation` | Deep analysis |
+
+**Run**:
+
+```bash
+python agents/sector_agent.py
+```
+
+---
+
+### 5.7 Tool Function Mapping
 
 | Existing langgraph_getdata/ | New tools/ | Description |
 |---|---|---|
@@ -885,7 +953,7 @@ print(get_sector_correlation('白酒', '啤酒', sector_type='industry'))
 | (None) | `stock_valuation.py` | Valuation percentile (Done) |
 | (None) | `stock_technical.py` | Technical indicators (Done) |
 
-### 5.7 Dependencies
+### 5.8 Dependencies
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn
