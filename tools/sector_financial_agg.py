@@ -8,6 +8,11 @@
 - 板块财务聚合：平均ROE、平均毛利率、合计营收/净利润
 - 板块估值统计：PE/PB均值、中位数、极值、估值分布
 
+估值指标说明:
+- PE 指 PE_TTM（滚动市盈率），基于最近12个月实际盈利计算，是A股最常用的PE口径
+- PB 指市净率（Price-to-Book），市值 / 净资产
+- 数据来源：market_data.stock_kline 表的 pe_ttm、pb 字段
+
 用法:
     from tools.sector_financial_agg import get_sector_financial_agg, get_sector_valuation_stats
     print(get_sector_financial_agg('白酒', sector_type='industry'))
@@ -51,7 +56,7 @@ def _median(values):
 
 
 def _search_sector(sector_type, keyword):
-    """模糊搜索板块，返回 (code, name)"""
+    """模糊搜索板块，返回匹配结果列表 [(code, name), ...]，精确匹配排在首位"""
     table = 'sector_industry_daily' if sector_type == 'industry' else 'sector_concept_daily'
     conn = get_connection()
     try:
@@ -60,11 +65,13 @@ def _search_sector(sector_type, keyword):
                 SELECT DISTINCT sector_code, sector_name FROM {table}
                 WHERE sector_name LIKE %s
             """, (f'%{keyword}%',))
-            matches = cursor.fetchall()
+            matches = list(cursor.fetchall())
             if not matches:
-                return None
+                return []
             exact = [m for m in matches if m[1] == keyword]
-            return exact[0] if exact else matches
+            if exact:
+                return exact
+            return matches
     finally:
         conn.close()
 
@@ -73,8 +80,8 @@ def _format_candidates(matches, keyword, sector_type):
     """格式化多个匹配结果，提示用户澄清"""
     type_name = '行业' if sector_type == 'industry' else '概念'
     result = f"关键词 \"{keyword}\" 匹配到多个{type_name}板块，请指定具体名称：\n"
-    for code, name in matches:
-        result += f"  - {name} ({code})\n"
+    for _, name in matches:
+        result += f"  - {name}\n"
     return result
 
 
@@ -94,7 +101,10 @@ def _get_constituents(sector_code, sector_type):
 
 
 def _get_latest_valuations(stock_codes):
-    """批量获取成分股最新估值数据 (PE_TTM, PB, total_mv, close, pct_chg)
+    """批量获取成分股最新估值数据
+
+    PE 指 PE_TTM（滚动市盈率），PB 指市净率。
+    数据来源：stock_kline 表的 pe_ttm、pb 字段。
 
     Returns:
         dict: {symbol: {pe_ttm, pb, total_mv, close, pct_chg}}
@@ -134,6 +144,21 @@ def _get_latest_valuations(stock_codes):
         conn.close()
 
 
+def _get_ts_codes(stock_codes):
+    """将纯数字代码转为带后缀的 ts_code（通过 company_info 表）"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            placeholders = ','.join(['%s'] * len(stock_codes))
+            cursor.execute(f"""
+                SELECT symbol, ts_code FROM company_info
+                WHERE symbol IN ({placeholders})
+            """, (*stock_codes,))
+            return {row[0]: row[1] for row in cursor.fetchall()}
+    finally:
+        conn.close()
+
+
 def _get_latest_financials(stock_codes):
     """批量获取成分股最新财务数据 (ROE, 毛利率, 营收, 净利润)
 
@@ -145,11 +170,17 @@ def _get_latest_financials(stock_codes):
     if not stock_codes:
         return {}
 
+    # 纯数字代码 → 带后缀 ts_code
+    code_map = _get_ts_codes(stock_codes)
+    ts_codes = list(code_map.values())
+    if not ts_codes:
+        return {}
+
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             # 获取每只股票最新一期的利润表
-            placeholders = ','.join(['%s'] * len(stock_codes))
+            placeholders = ','.join(['%s'] * len(ts_codes))
             cursor.execute(f"""
                 SELECT ts_code, report_data, report_date
                 FROM stock_financial
@@ -159,7 +190,7 @@ def _get_latest_financials(stock_codes):
                       SELECT MAX(sf.report_date) FROM stock_financial sf
                       WHERE sf.ts_code = stock_financial.ts_code AND sf.statement_type = 'income'
                   )
-            """, (*stock_codes,))
+            """, (*ts_codes,))
 
             income_data = {}
             for row in cursor.fetchall():
@@ -179,7 +210,7 @@ def _get_latest_financials(stock_codes):
                       SELECT MAX(sf.report_date) FROM stock_financial sf
                       WHERE sf.ts_code = stock_financial.ts_code AND sf.statement_type = 'balance'
                   )
-            """, (*stock_codes,))
+            """, (*ts_codes,))
 
             balance_data = {}
             for row in cursor.fetchall():
@@ -190,8 +221,7 @@ def _get_latest_financials(stock_codes):
                 balance_data[ts_code] = data
 
             result = {}
-            for ts_code in stock_codes:
-                symbol = ts_code.split('.')[0]
+            for symbol, ts_code in code_map.items():
                 income = income_data.get(ts_code, {})
                 balance = balance_data.get(ts_code, {})
 
@@ -274,14 +304,26 @@ def get_sector_financial_agg(sector_name, sector_type='industry'):
     """
     type_name = '行业' if sector_type == 'industry' else '概念'
 
-    match = _search_sector(sector_type, sector_name)
-    if not match:
+    matches = _search_sector(sector_type, sector_name)
+    if not matches:
         return f"未找到{type_name}板块: {sector_name}"
-    if isinstance(match, list):
-        return _format_candidates(match, sector_name, sector_type)
 
-    sector_code, sector_name_real = match
+    # 多个匹配时，逐个分析并拼接结果
+    if len(matches) > 1:
+        parts = []
+        for code, name in matches:
+            parts.append(_agg_single_sector(code, name, sector_type))
+        return "\n\n".join(parts)
 
+    sector_code, sector_name_real = matches[0]
+    return _agg_single_sector(sector_code, sector_name_real, sector_type)
+
+
+def _agg_single_sector(sector_code, sector_name_real, sector_type):
+    """对单个板块执行财务聚合分析
+
+    PE 指 PE_TTM（滚动市盈率），PB 指市净率。
+    """
     # 获取成分股
     constituents = _get_constituents(sector_code, sector_type)
     if not constituents:
@@ -324,10 +366,10 @@ def get_sector_financial_agg(sector_name, sector_type='industry'):
         revenue = fin.get('revenue')
         np_val = fin.get('net_profit')
 
-        # 过滤异常PE值
-        if pe is not None and (pe < 0 or pe > 1000):
+        # 过滤异常值
+        if pe is not None and pe > 1000:
             pe = None
-        if pb is not None and (pb < 0 or pb > 100):
+        if pb is not None and pb > 100:
             pb = None
 
         if pe is not None:
@@ -371,10 +413,14 @@ def get_sector_financial_agg(sector_name, sector_type='industry'):
     # 估值统计
     result += f"\n【估值统计】\n"
     if pe_list:
+        pe_neg = sum(1 for v in pe_list if v < 0)
         result += (f"  PE_TTM:  均值 {sum(pe_list)/len(pe_list):.1f}"
                    f"  中位数 {_median(pe_list):.1f}"
                    f"  最小 {min(pe_list):.1f}"
-                   f"  最大 {max(pe_list):.1f}\n")
+                   f"  最大 {max(pe_list):.1f}")
+        if pe_neg > 0:
+            result += f"  (其中{pe_neg}只亏损)"
+        result += "\n"
     if pb_list:
         result += (f"  PB:      均值 {sum(pb_list)/len(pb_list):.1f}"
                    f"  中位数 {_median(pb_list):.1f}"
@@ -412,14 +458,26 @@ def get_sector_valuation_stats(sector_name, sector_type='industry'):
     """
     type_name = '行业' if sector_type == 'industry' else '概念'
 
-    match = _search_sector(sector_type, sector_name)
-    if not match:
+    matches = _search_sector(sector_type, sector_name)
+    if not matches:
         return f"未找到{type_name}板块: {sector_name}"
-    if isinstance(match, list):
-        return _format_candidates(match, sector_name, sector_type)
 
-    sector_code, sector_name_real = match
+    # 多个匹配时，逐个分析并拼接结果
+    if len(matches) > 1:
+        parts = []
+        for code, name in matches:
+            parts.append(_val_single_sector(code, name, sector_type))
+        return "\n\n".join(parts)
 
+    sector_code, sector_name_real = matches[0]
+    return _val_single_sector(sector_code, sector_name_real, sector_type)
+
+
+def _val_single_sector(sector_code, sector_name_real, sector_type):
+    """对单个板块执行估值分布统计
+
+    PE 指 PE_TTM（滚动市盈率），PB 指市净率。
+    """
     # 获取成分股
     constituents = _get_constituents(sector_code, sector_type)
     if not constituents:
@@ -431,7 +489,7 @@ def get_sector_valuation_stats(sector_name, sector_type='industry'):
     # 批量获取估值数据
     valuations = _get_latest_valuations(stock_codes)
 
-    # 构建个股估值列表并按PE排序
+    # 构建个股估值列表
     stock_vals = []
     pe_all = []
     pb_all = []
@@ -445,9 +503,9 @@ def get_sector_valuation_stats(sector_name, sector_type='industry'):
         pb = val.get('pb')
 
         # 过滤异常值
-        if pe is not None and (pe < 0 or pe > 1000):
+        if pe is not None and pe > 1000:
             pe = None
-        if pb is not None and (pb < 0 or pb > 100):
+        if pb is not None and pb > 100:
             pb = None
 
         if pe is not None:
@@ -466,7 +524,7 @@ def get_sector_valuation_stats(sector_name, sector_type='industry'):
         return f"板块 [{sector_name_real}] 无有效估值数据"
 
     # 估值分布统计（基于PE）
-    levels = {'低估': [], '合理偏低': [], '合理': [], '合理偏高': [], '高估': [], 'N/A': []}
+    levels = {'低估': [], '合理偏低': [], '合理': [], '合理偏高': [], '高估': [], '亏损': [], 'N/A': []}
 
     if pe_all:
         pe_sorted = sorted(pe_all)
@@ -474,6 +532,9 @@ def get_sector_valuation_stats(sector_name, sector_type='industry'):
             pe = sv['pe']
             if pe is None:
                 levels['N/A'].append(sv)
+                continue
+            if pe < 0:
+                levels['亏损'].append(sv)
                 continue
             # 计算在板块内的百分位
             count_below = sum(1 for v in pe_sorted if v < pe)
@@ -484,7 +545,10 @@ def get_sector_valuation_stats(sector_name, sector_type='industry'):
             levels[level].append(sv)
     else:
         for sv in stock_vals:
-            levels['N/A'].append(sv)
+            if sv['pe'] is not None and sv['pe'] < 0:
+                levels['亏损'].append(sv)
+            else:
+                levels['N/A'].append(sv)
 
     # 格式化输出
     result = f"=== {sector_name_real}板块估值分布 ===\n"
@@ -494,10 +558,14 @@ def get_sector_valuation_stats(sector_name, sector_type='industry'):
     # 汇总统计
     result += f"\n【PE_TTM统计】\n"
     if pe_all:
+        pe_neg = sum(1 for v in pe_all if v < 0)
         result += (f"  均值: {sum(pe_all)/len(pe_all):.1f}  "
                    f"中位数: {_median(pe_all):.1f}  "
                    f"最小: {min(pe_all):.1f}  "
-                   f"最大: {max(pe_all):.1f}\n")
+                   f"最大: {max(pe_all):.1f}")
+        if pe_neg > 0:
+            result += f"  (其中{pe_neg}只亏损)"
+        result += "\n"
 
     result += f"\n【PB统计】\n"
     if pb_all:
@@ -516,6 +584,13 @@ def get_sector_valuation_stats(sector_name, sector_type='industry'):
             if names:
                 result += f"  ({', '.join(names)}{'...' if len(stocks)>5 else ''})"
             result += "\n"
+
+    if levels['亏损']:
+        names = [f"{s['name']}" for s in levels['亏损'][:5]]
+        result += f"  亏损(PE<0): {len(levels['亏损'])}只"
+        if names:
+            result += f"  ({', '.join(names)}{'...' if len(levels['亏损'])>5 else ''})"
+        result += "\n"
 
     if levels['N/A']:
         result += f"  无数据: {len(levels['N/A'])}只\n"
