@@ -273,7 +273,7 @@ Top 10:
 **待开发**：
 - [x] `tools/stock_sector_mapping.py` — 个股-板块映射工具（已完成）
 - [x] `tools/sector_financial_agg.py` — 板块财务聚合工具（已完成）
-- [ ] `tools/news_stock_linker.py` — 新闻-行情关联工具
+- [x] `tools/news_stock_linker.py` — 新闻-行情关联工具（已完成）
 - [ ] `agents/correlation_agent.py` — 关联分析 Agent 编排
 
 ---
@@ -1185,6 +1185,31 @@ print(get_sector_correlation('白酒', '啤酒', sector_type='industry'))
 
 ---
 
+#### tools/news_stock_linker.py — 新闻-行情关联工具
+
+查询新闻标题提及的公司/板块，关联其近期行情走势。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `find_news_by_keyword(keyword, limit)` | 按关键词搜索新闻（标题/摘要模糊匹配） |
+| `search_news_with_market(keyword, limit, days_before, days_after)` | 搜索新闻并自动关联匹配个股/板块的近期行情走势 |
+
+**使用示例**：
+
+```python
+from tools.news_stock_linker import find_news_by_keyword, search_news_with_market
+
+# 按关键词搜索新闻
+print(find_news_by_keyword('半导体', limit=5))
+
+# 搜索新闻并关联行情走势
+print(search_news_with_market('贵州茅台', limit=3, days_before=3, days_after=3))
+```
+
+---
+
 ### 5.6 板块分析智能体
 
 #### agents/sector_agent.py — 板块分析智能体
@@ -1222,6 +1247,9 @@ python agents/sector_agent.py
 | （无） | `stock_fundamental.py` | 基本面指标计算（已完成） |
 | （无） | `stock_valuation.py` | 估值分位分析（已完成） |
 | （无） | `stock_technical.py` | 技术指标计算（已完成） |
+| （无） | `stock_sector_mapping.py` | 个股-板块映射（已完成） |
+| （无） | `sector_financial_agg.py` | 板块财务聚合（已完成） |
+| （无） | `news_stock_linker.py` | 新闻-行情关联（已完成） |
 
 ### 5.8 依赖安装
 

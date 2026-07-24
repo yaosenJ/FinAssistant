@@ -271,7 +271,7 @@ Top 10:
 **To-Do**:
 - [x] `tools/stock_sector_mapping.py` — Stock-sector mapping tool (Done)
 - [x] `tools/sector_financial_agg.py` — Sector financial aggregation (Done)
-- [ ] `tools/news_stock_linker.py` — News-quote correlation tool
+- [x] `tools/news_stock_linker.py` — News-quote correlation tool (Done)
 - [ ] `agents/correlation_agent.py` — Correlation analysis agent
 
 ---
@@ -915,6 +915,31 @@ print(get_sector_correlation('白酒', '啤酒', sector_type='industry'))
 
 ---
 
+#### tools/news_stock_linker.py — News-Stock Linker
+
+Links news headlines to mentioned companies/sectors and correlates with their recent price trends.
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `find_news_by_keyword(keyword, limit)` | Search news by keyword (title/digest fuzzy match) |
+| `search_news_with_market(keyword, limit, days_before, days_after)` | Search news and auto-correlate with matched stocks/sectors price trends |
+
+**Usage Example**:
+
+```python
+from tools.news_stock_linker import find_news_by_keyword, search_news_with_market
+
+# Search news by keyword
+print(find_news_by_keyword('半导体', limit=5))
+
+# Search news and correlate with market data
+print(search_news_with_market('贵州茅台', limit=3, days_before=3, days_after=3))
+```
+
+---
+
 ### 5.6 Sector Analysis Agent
 
 #### agents/sector_agent.py — Sector Analysis Agent
@@ -952,6 +977,9 @@ python agents/sector_agent.py
 | (None) | `stock_fundamental.py` | Fundamental indicators (Done) |
 | (None) | `stock_valuation.py` | Valuation percentile (Done) |
 | (None) | `stock_technical.py` | Technical indicators (Done) |
+| (None) | `stock_sector_mapping.py` | Stock-sector mapping (Done) |
+| (None) | `sector_financial_agg.py` | Sector financial aggregation (Done) |
+| (None) | `news_stock_linker.py` | News-stock correlation (Done) |
 
 ### 5.8 Dependencies
 
