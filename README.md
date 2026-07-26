@@ -272,7 +272,7 @@ Top 10:
 - [x] `tools/stock_sector_mapping.py` — Stock-sector mapping tool (Done)
 - [x] `tools/sector_financial_agg.py` — Sector financial aggregation (Done)
 - [x] `tools/news_stock_linker.py` — News-quote correlation tool (Done)
-- [ ] `agents/correlation_agent.py` — Correlation analysis agent
+- [x] `agents/correlation_agent.py` — Correlation analysis agent (Done)
 
 ---
 
@@ -300,7 +300,7 @@ Top 10:
 ```
 
 **To-Do**:
-- [ ] `tools/financial_query.py` — Financial data query tool
+- [x] `tools/financial_query.py` — Financial data query tool (Done)
 - [ ] `tools/financial_compare.py` — Financial comparison tool
 - [ ] `tools/financial_anomaly.py` — Anomaly detection tool
 - [ ] `tools/financial_score.py` — Financial health scoring
@@ -963,7 +963,29 @@ python agents/sector_agent.py
 
 ---
 
-### 5.7 Tool Function Mapping
+### 5.7 Correlation Analysis Agent
+
+#### agents/correlation_agent.py — Correlation Analysis Agent
+
+Integrates stock-sector mapping, sector financial aggregation, and news-market correlation tool groups for cross-data analysis.
+
+**Tool Group Structure**:
+
+| Tool Group | Tools | Description |
+|------------|-------|-------------|
+| stock-sector | `find_stock_sectors` | Stock-sector mapping |
+| sector-finance | `get_sector_financial_agg` / `get_sector_valuation_stats` | Sector financial aggregation, valuation distribution |
+| news-market | `find_news_by_keyword` / `search_news_with_market` | News search, news-market correlation |
+
+**Run**:
+
+```bash
+python agents/correlation_agent.py
+```
+
+---
+
+### 5.8 Tool Function Mapping
 
 | Existing langgraph_getdata/ | New tools/ | Description |
 |---|---|---|
@@ -972,7 +994,7 @@ python agents/sector_agent.py
 | `query_industry_component_list.py` | `sector_query.py` | Sector constituents |
 | `query_concept_dc_day.py` | `sector_query.py` | Concept sector quotes |
 | `query_concept_dc_stock.py` | `sector_query.py` | Concept sector constituents |
-| `query_fin_account.py` | `financial_query.py` | Financial statement query |
+| `query_fin_account.py` | `financial_query.py` | Financial statement query (Done) |
 | (None) | `news_query.py` | News query (New) |
 | (None) | `stock_fundamental.py` | Fundamental indicators (Done) |
 | (None) | `stock_valuation.py` | Valuation percentile (Done) |
@@ -981,7 +1003,7 @@ python agents/sector_agent.py
 | (None) | `sector_financial_agg.py` | Sector financial aggregation (Done) |
 | (None) | `news_stock_linker.py` | News-stock correlation (Done) |
 
-### 5.8 Dependencies
+### 5.9 Dependencies
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn

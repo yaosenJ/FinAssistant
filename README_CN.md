@@ -274,7 +274,7 @@ Top 10:
 - [x] `tools/stock_sector_mapping.py` — 个股-板块映射工具（已完成）
 - [x] `tools/sector_financial_agg.py` — 板块财务聚合工具（已完成）
 - [x] `tools/news_stock_linker.py` — 新闻-行情关联工具（已完成）
-- [ ] `agents/correlation_agent.py` — 关联分析 Agent 编排
+- [x] `agents/correlation_agent.py` — 关联分析智能体（已完成）
 
 ---
 
@@ -302,7 +302,7 @@ Top 10:
 ```
 
 **待开发**：
-- [ ] `tools/financial_query.py` — 财务数据查询工具
+- [x] `tools/financial_query.py` — 财务数据查询工具（已完成）
 - [ ] `tools/financial_compare.py` — 财务对比分析工具
 - [ ] `tools/financial_anomaly.py` — 异常指标检测工具
 - [ ] `tools/financial_score.py` — 财务健康度评分工具
@@ -1233,7 +1233,29 @@ python agents/sector_agent.py
 
 ---
 
-### 5.7 工具函数与已有代码的对照
+### 5.7 关联分析智能体
+
+#### agents/correlation_agent.py — 关联分析智能体
+
+整合个股-板块映射、板块财务聚合、新闻-行情关联三大工具组，提供跨数据关联分析能力。
+
+**工具组划分**：
+
+| 工具组 | 工具 | 说明 |
+|--------|------|------|
+| stock-sector | `find_stock_sectors` | 个股-板块映射 |
+| sector-finance | `get_sector_financial_agg` / `get_sector_valuation_stats` | 板块财务聚合、估值分布 |
+| news-market | `find_news_by_keyword` / `search_news_with_market` | 新闻搜索、新闻-行情关联 |
+
+**运行方式**：
+
+```bash
+python agents/correlation_agent.py
+```
+
+---
+
+### 5.8 工具函数与已有代码的对照
 
 | 现有 langgraph_getdata/ | 新 tools/ | 说明 |
 |---|---|---|
@@ -1242,7 +1264,7 @@ python agents/sector_agent.py
 | `query_industry_component_list.py` | `sector_query.py` | 板块成分股 |
 | `query_concept_dc_day.py` | `sector_query.py` | 概念板块行情 |
 | `query_concept_dc_stock.py` | `sector_query.py` | 概念板块成分股 |
-| `query_fin_account.py` | `financial_query.py` | 财务报表查询 |
+| `query_fin_account.py` | `financial_query.py` | 财务报表查询（已完成） |
 | （无） | `news_query.py` | 新闻查询（新增） |
 | （无） | `stock_fundamental.py` | 基本面指标计算（已完成） |
 | （无） | `stock_valuation.py` | 估值分位分析（已完成） |
@@ -1251,7 +1273,7 @@ python agents/sector_agent.py
 | （无） | `sector_financial_agg.py` | 板块财务聚合（已完成） |
 | （无） | `news_stock_linker.py` | 新闻-行情关联（已完成） |
 
-### 5.8 依赖安装
+### 5.9 依赖安装
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn
