@@ -302,7 +302,7 @@ Top 10:
 **To-Do**:
 - [x] `tools/financial_query.py` — Financial data query tool (Done)
 - [x] `tools/financial_compare.py` — Financial comparison tool (Done)
-- [ ] `tools/financial_anomaly.py` — Anomaly detection tool
+- [x] `tools/financial_anomaly.py` — Anomaly detection tool (Done)
 - [ ] `tools/financial_score.py` — Financial health scoring
 - [ ] `agents/financial_agent.py` — Financial Q&A agent
 - [ ] `rag/financial_embedding.py` — Financial statement vectorization

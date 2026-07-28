@@ -304,7 +304,7 @@ Top 10:
 **待开发**：
 - [x] `tools/financial_query.py` — 财务数据查询工具（已完成）
 - [x] `tools/financial_compare.py` — 财务对比分析工具（已完成）
-- [ ] `tools/financial_anomaly.py` — 异常指标检测工具
+- [x] `tools/financial_anomaly.py` — 异常指标检测工具（已完成）
 - [ ] `tools/financial_score.py` — 财务健康度评分工具
 - [ ] `agents/financial_agent.py` — 财务问答 Agent 编排
 - [ ] `rag/financial_embedding.py` — 财务报表向量化入库
