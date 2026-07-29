@@ -1,0 +1,15 @@
+{
+  "total_runtime_seconds": 77.4,
+  "step_times": {
+    "scoring": 77.27,
+    "portfolio": 0.0,
+    "reports": 0.02
+  },
+  "peak_memory_mb": 26.12,
+  "peak_cpu_percent": 0.0,
+  "cpu_count": 20,
+  "token_consumption": {
+    "note": "纯Python脚本执行，未调用LLM API，Token消耗为0",
+    "total_tokens": 0
+  }
+}
