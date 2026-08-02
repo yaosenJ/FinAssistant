@@ -70,33 +70,138 @@ def _safe_float(val, default=None):
         return default
 
 
-def score_fundamental(indicators):
+def _z_score(value, mean, std):
+    """计算 Z-score，std=0 时返回 0"""
+    if std == 0:
+        return 0
+    return (value - mean) / std
+
+
+# 基本面 Z-score 指标配置：(指标key, 权重, 是否正向)
+# 正向：值越大越好；反向：值越小越好
+FUNDAMENTAL_Z_FIELDS = [
+    ('ROE',                     0.20, True),
+    ('gross_margin',            0.12, True),   # 毛利率 或 营业利润率
+    ('净利率',                   0.10, True),
+    ('经营现金流净利润比',         0.12, True),
+    ('营收同比增长率',            0.12, True),
+    ('净利润同比增长率',          0.12, True),
+    ('杜邦_总资产周转率',          0.07, True),
+    ('杜邦_权益乘数',             0.05, False),  # 反向：杠杆越高风险越大
+    ('应收账款占比',              0.05, False),  # 反向：占比越高风险越大
+    ('资产负债率',               0.05, False),  # 反向：负债率越高风险越大
+]
+
+
+def _compute_fundamental_stats(all_indicators):
+    """计算 49 只股票基本面指标的 mean 和 std（用于 Z-score）
+
+    Args:
+        all_indicators: list[dict]，每只股票的 calc_fundamental_indicators 返回值
+
+    Returns:
+        dict: {field_name: {'mean': float, 'std': float}}
+    """
+    # 收集每个指标的原始值
+    raw = {field: [] for field, _, _ in FUNDAMENTAL_Z_FIELDS}
+
+    for ind in all_indicators:
+        for field, _, _ in FUNDAMENTAL_Z_FIELDS:
+            if field == 'gross_margin':
+                val = _safe_float(ind.get('毛利率') or ind.get('营业利润率'))
+            else:
+                val = _safe_float(ind.get(field))
+            if val is not None:
+                raw[field].append(val)
+
+    # 计算 mean 和 std
+    import statistics
+    stats = {}
+    for field, _, _ in FUNDAMENTAL_Z_FIELDS:
+        values = raw[field]
+        if len(values) >= 2:
+            mean = statistics.mean(values)
+            std = statistics.stdev(values)
+        elif len(values) == 1:
+            mean = values[0]
+            std = 0
+        else:
+            mean = 0
+            std = 0
+        stats[field] = {'mean': mean, 'std': std}
+
+    return stats
+
+
+def score_fundamental(indicators, stats=None):
     """基本面评分 (0-100)
 
-    基于 ROE、毛利率/营业利润率、净利率、杜邦三因子、现金流质量、应收账款占比、资产负债率、增长率
+    Args:
+        indicators: 单只股票的指标 dict
+        stats: 可选，_compute_fundamental_stats 的返回值。
+               提供时使用 Z-score 标准化；否则退回原硬编码阈值逻辑。
     """
+    if stats is not None:
+        return _score_fundamental_zscore(indicators, stats)
+    return _score_fundamental_legacy(indicators)
+
+
+def _score_fundamental_zscore(indicators, stats):
+    """Z-score 标准化基本面评分
+
+    每个指标在 49 只股票内计算 z-score，方向调整后加权求和，
+    映射到 0-100：score = 50 + weighted_z * 10
+    """
+    weighted_z = 0
+    total_weight = 0
+
+    for field, weight, positive in FUNDAMENTAL_Z_FIELDS:
+        if field == 'gross_margin':
+            val = _safe_float(indicators.get('毛利率') or indicators.get('营业利润率'))
+        else:
+            val = _safe_float(indicators.get(field))
+
+        if val is None:
+            continue
+
+        s = stats.get(field, {})
+        mean = s.get('mean', 0)
+        std = s.get('std', 0)
+
+        z = _z_score(val, mean, std)
+        # 反向指标：z 取反
+        if not positive:
+            z = -z
+
+        weighted_z += z * weight
+        total_weight += weight
+
+    if total_weight > 0:
+        weighted_z /= total_weight  # 归一化
+
+    score = 50 + weighted_z * 10
+    return max(0, min(100, round(score, 1)))
+
+
+def _score_fundamental_legacy(indicators):
+    """原硬编码阈值基本面评分（兼容模式）"""
     score = 50  # 基准分
 
     roe = _safe_float(indicators.get('ROE'))
-    # 银行股用营业利润率，非银行股用毛利率
     gross_margin = _safe_float(indicators.get('毛利率') or indicators.get('营业利润率'))
     net_margin = _safe_float(indicators.get('净利率'))
     cf_ratio = _safe_float(indicators.get('经营现金流净利润比'))
     rev_growth = _safe_float(indicators.get('营收同比增长率'))
     np_growth = _safe_float(indicators.get('净利润同比增长率'))
 
-    # 杜邦三因子
     dupont_margin = _safe_float(indicators.get('杜邦_净利率'))
     dupont_turnover = _safe_float(indicators.get('杜邦_总资产周转率'))
     dupont_leverage = _safe_float(indicators.get('杜邦_权益乘数'))
 
-    # 应收账款占比、资产负债率
     ar_ratio = _safe_float(indicators.get('应收账款占比'))
     debt_ratio = _safe_float(indicators.get('资产负债率'))
 
-    # ═══════════ 模块1：盈利能力 (基准分 50, 最高 +30) ═══════════
-
-    # ROE 评分（权重最高）
+    # 盈利能力
     if roe is not None:
         if roe > 20:
             score += 20
@@ -109,7 +214,6 @@ def score_fundamental(indicators):
         elif roe < 0:
             score -= 20
 
-    # 毛利率/营业利润率
     if gross_margin is not None:
         if gross_margin > 50:
             score += 10
@@ -118,8 +222,7 @@ def score_fundamental(indicators):
         elif gross_margin < 10:
             score -= 5
 
-    # ═══════════ 模块2：现金流质量 (最高 +10) ═══════════
-
+    # 现金流质量
     if cf_ratio is not None:
         if cf_ratio > 1.2:
             score += 10
@@ -128,7 +231,6 @@ def score_fundamental(indicators):
         elif cf_ratio < 0:
             score -= 10
 
-    # 应收账款占比（越低越好）
     if ar_ratio is not None:
         if ar_ratio < 10:
             score += 5
@@ -137,9 +239,7 @@ def score_fundamental(indicators):
         elif ar_ratio > 30:
             score -= 5
 
-    # ═══════════ 模块3：偿债能力 (最高 +5) ═══════════
-
-    # 资产负债率（越低越安全，银行除外因为银行本身就是高杠杆）
+    # 偿债能力
     if debt_ratio is not None:
         is_bank = indicators.get('is_bank', False)
         if not is_bank:
@@ -150,8 +250,7 @@ def score_fundamental(indicators):
             elif debt_ratio > 70:
                 score -= 5
 
-    # ═══════════ 模块4：成长性 (最高 +16) ═══════════
-
+    # 成长性
     if rev_growth is not None:
         if rev_growth > 20:
             score += 8
@@ -428,19 +527,119 @@ def score_single_stock(ts_code, name):
 def score_all_stocks():
     """对所有49只股票打分并排名
 
+    两阶段：
+    1. 收集全部基本面指标，计算 Z-score 统计量
+    2. 用 Z-score 打分（基本面）+ 原逻辑打分（其他维度）
+
     排名规则：浮点分数排序后，分配唯一整数排名1-49（无并列）
     板块排名：每个板块内部分配唯一整数排名1-N
     """
     results = []
     total = len(ALL_STOCKS)
 
+    # ── 阶段一：收集基本面指标 ──
+    print("阶段一：采集基本面数据...")
+    fundamentals = []
     for i, (ts_code, name, sector) in enumerate(ALL_STOCKS, 1):
+        print(f"  [{i}/{total}] {name}({ts_code})", end="", flush=True)
+        try:
+            fund = calc_fundamental_indicators(ts_code)
+            if 'error' in fund:
+                fund = {}
+            fundamentals.append(fund)
+            print(" OK")
+        except Exception as e:
+            print(f" 失败: {e}")
+            fundamentals.append({})
+
+    fund_stats = _compute_fundamental_stats(fundamentals)
+    print(f"基本面统计量已计算（{len(fundamentals)}只股票）\n")
+
+    # ── 阶段二：全维度打分 ──
+    print("阶段二：全维度打分...")
+    for i, ((ts_code, name, sector), fund) in enumerate(zip(ALL_STOCKS, fundamentals), 1):
         print(f"[{i}/{total}] 正在分析 {name}({ts_code})...", end="", flush=True)
         try:
-            r = score_single_stock(ts_code, name)
-            r['sector'] = sector
-            results.append(r)
-            print(f" 综合评分: {r['total_score']}")
+            result = {
+                'ts_code': ts_code, 'name': name, 'sector': sector,
+                'scores': {}, 'details': {},
+            }
+
+            # 基本面（用 Z-score）
+            if fund and 'error' not in fund:
+                result['scores']['fundamental'] = score_fundamental(fund, stats=fund_stats)
+                result['details']['fundamental'] = fund
+            else:
+                result['scores']['fundamental'] = 30
+
+            # 估值
+            try:
+                val = calc_valuation_percentile(ts_code)
+                if 'error' not in val:
+                    result['scores']['valuation'] = score_valuation(val)
+                    result['details']['valuation'] = val
+                else:
+                    result['scores']['valuation'] = 50
+            except Exception as e:
+                logger.warning(f"{ts_code} 估值分析失败: {e}")
+                result['scores']['valuation'] = 50
+
+            # 技术面 + 动量
+            try:
+                tech = calc_technical_indicators(ts_code)
+                if 'error' not in tech:
+                    result['scores']['technical'] = score_technical(tech)
+                    result['scores']['momentum'] = score_momentum(tech)
+                    result['details']['technical'] = tech
+                else:
+                    result['scores']['technical'] = 50
+                    result['scores']['momentum'] = 50
+            except Exception as e:
+                logger.warning(f"{ts_code} 技术面/动量分析失败: {e}")
+                result['scores']['technical'] = 50
+                result['scores']['momentum'] = 50
+
+            # 异常检测
+            try:
+                anomaly = detect_anomalies(ts_code)
+                result['scores']['anomaly'] = score_anomaly(anomaly)
+                result['details']['anomaly'] = anomaly
+            except Exception as e:
+                logger.warning(f"{ts_code} 异常检测失败: {e}")
+                result['scores']['anomaly'] = 80
+
+            # 综合加权
+            weights = {
+                'fundamental': 0.20, 'valuation': 0.15,
+                'technical': 0.30, 'momentum': 0.25, 'anomaly': 0.10,
+            }
+            total_score = 0
+            total_weight = 0
+            for factor, weight in weights.items():
+                s = result['scores'].get(factor)
+                if s is not None:
+                    total_score += s * weight
+                    total_weight += weight
+            if total_weight > 0:
+                result['total_score'] = round(total_score / total_weight * (sum(weights.values()) / total_weight), 1)
+            else:
+                result['total_score'] = 0
+
+            # summary
+            tech = result['details'].get('technical', {})
+            result['summary'] = {
+                'fundamental': f"ROE={_safe_float(result['details'].get('fundamental', {}).get('ROE'), '--')}% "
+                               f"毛利率={_safe_float(result['details'].get('fundamental', {}).get('毛利率'), '--')}%",
+                'valuation': f"PE分位={_safe_float(result['details'].get('valuation', {}).get('pe_ttm_percentile'), '--')}% "
+                             f"PB分位={_safe_float(result['details'].get('valuation', {}).get('pb_percentile'), '--')}%",
+                'technical': f"趋势={tech.get('ma_trend', '--')} "
+                             f"MACD={tech.get('macd_signal', '--')}",
+                'momentum': f"5日涨幅={_safe_float(tech.get('pct_5d'), '--')}% "
+                            f"20日涨幅={_safe_float(tech.get('pct_20d'), '--')}%",
+            }
+
+            results.append(result)
+            print(f" 综合评分: {result['total_score']}")
         except Exception as e:
             print(f" 失败: {e}")
             results.append({
