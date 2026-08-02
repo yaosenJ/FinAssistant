@@ -520,7 +520,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='多因子选股打分')
     parser.add_argument('--output', '-o', help='输出JSON文件路径')
-    parser.add_argument('--top', '-t', type=int, default=20, help='显示前N名')
+    parser.add_argument('--top', '-t', type=int, default=49, help='显示前N名')
     args = parser.parse_args()
 
     print(f"开始对{len(ALL_STOCKS)}只股票进行多因子打分...")
