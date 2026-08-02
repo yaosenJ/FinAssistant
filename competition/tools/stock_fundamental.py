@@ -389,7 +389,7 @@ def _calc_growth_rates(ts_code, report_date, is_bank):
     # 03 → Q1，06 → Q2，09 → Q3，12 → Q4
     month = int(report_date[4:6])
 
-    def _get_single_quarter(ts_code, report_date, is_bank):
+    def _get_single_quarter(ts_code, report_date):
         """获取某期的单季营收和净利润
 
         原理：A股财报是累计制
@@ -401,7 +401,6 @@ def _calc_growth_rates(ts_code, report_date, is_bank):
         Args:
             ts_code: 股票代码
             report_date: 报告日（YYYYMMDD）
-            is_bank: 是否为银行股
 
         Returns:
             (单季营收, 单季净利润)
@@ -442,7 +441,7 @@ def _calc_growth_rates(ts_code, report_date, is_bank):
         return sq_rev, sq_np
 
     # 获取当前期单季数据
-    curr_sq_rev, curr_sq_np = _get_single_quarter(ts_code, report_date, is_bank)
+    curr_sq_rev, curr_sq_np = _get_single_quarter(ts_code, report_date)
 
     # 确定上期报告日（环比对比对象）
     if month == 3:
@@ -461,7 +460,7 @@ def _calc_growth_rates(ts_code, report_date, is_bank):
         qoq_date = report_date[:4] + '0930'
 
     # 获取上期单季数据
-    qoq_sq_rev, qoq_sq_np = _get_single_quarter(ts_code, qoq_date, is_bank)
+    qoq_sq_rev, qoq_sq_np = _get_single_quarter(ts_code, qoq_date)
 
     # 计算环比增长率
     if curr_sq_rev is not None and qoq_sq_rev is not None and qoq_sq_rev != 0:
