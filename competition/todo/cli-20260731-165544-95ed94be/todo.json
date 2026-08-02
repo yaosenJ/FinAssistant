@@ -1,0 +1,36 @@
+
+[
+  {
+    "id": "data_collection",
+    "content": "采集49只股票多维度数据",
+    "activeForm": "采集49只股票多维度数据",
+    "description": "运行 stock_scorer.py 采集基本面、估值、技术面、动量、异常检测数据",
+    "status": "completed",
+    "depends_on": [],
+    "result_summary": null,
+    "meta_data": null,
+    "selected_model_id": null
+  },
+  {
+    "id": "agent_decision",
+    "content": "Agent自主分析数据并决策持仓与权重",
+    "activeForm": "分析数据并决策持仓与权重",
+    "description": "读取score_results.json，综合多维度分析，自主决定选股和仓位",
+    "status": "completed",
+    "depends_on": [],
+    "result_summary": null,
+    "meta_data": null,
+    "selected_model_id": null
+  },
+  {
+    "id": "portfolio_report",
+    "content": "生成Portfolio.json、个股研报和投资报告",
+    "activeForm": "生成Portfolio.json、个股研报和投资报告",
+    "description": "输出投资组合、49只个股研报、总结性投资报告",
+    "status": "completed",
+    "depends_on": [],
+    "result_summary": null,
+    "meta_data": null,
+    "selected_model_id": null
+  }
+]

@@ -1,0 +1,47 @@
+
+[
+  {
+    "id": "data_collection",
+    "content": "采集49只股票多维度数据并计算排名",
+    "activeForm": "采集49只股票多维度数据并计算排名",
+    "description": "运行 stock_scorer.py 采集基本面/估值/技术面/动量/风险数据，输出 output/score_results.json",
+    "status": "completed",
+    "depends_on": [],
+    "result_summary": null,
+    "meta_data": null,
+    "selected_model_id": null
+  },
+  {
+    "id": "portfolio_decision",
+    "content": "Agent自主分析数据并决策投资组合",
+    "activeForm": "分析数据并决策投资组合",
+    "description": "读取 score_results.json，综合分析后自主决定选股和仓位，生成 output/Portfolio.json",
+    "status": "completed",
+    "depends_on": [],
+    "result_summary": null,
+    "meta_data": null,
+    "selected_model_id": null
+  },
+  {
+    "id": "stock_reports",
+    "content": "生成49只个股研究报告（含图表）",
+    "activeForm": "生成49只个股研究报告",
+    "description": "调用 report_generator.py + chart_generator.py 为全部49只股票生成研报和图表",
+    "status": "completed",
+    "depends_on": [],
+    "result_summary": null,
+    "meta_data": null,
+    "selected_model_id": null
+  },
+  {
+    "id": "investment_report",
+    "content": "生成总结性投资报告",
+    "activeForm": "生成总结性投资报告",
+    "description": "生成投资报告.md，包含选股理由、排除理由、仓位理由",
+    "status": "completed",
+    "depends_on": [],
+    "result_summary": null,
+    "meta_data": null,
+    "selected_model_id": null
+  }
+]
