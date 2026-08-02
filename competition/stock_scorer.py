@@ -429,8 +429,14 @@ def score_momentum(tech_data):
     return max(0, min(100, score))
 
 
-def score_single_stock(ts_code, name):
-    """对单只股票进行全维度打分"""
+def score_single_stock(ts_code, name, fund_stats=None):
+    """对单只股票进行全维度打分
+
+    Args:
+        ts_code: 股票代码
+        name: 股票名称
+        fund_stats: 可选，基本面 Z-score 统计量。提供时基本面用 Z-score，否则用 legacy。
+    """
     result = {
         'ts_code': ts_code,
         'name': name,
@@ -442,7 +448,7 @@ def score_single_stock(ts_code, name):
     try:
         fund = calc_fundamental_indicators(ts_code)
         if 'error' not in fund:
-            result['scores']['fundamental'] = score_fundamental(fund)
+            result['scores']['fundamental'] = score_fundamental(fund, stats=fund_stats)
             result['details']['fundamental'] = fund
         else:
             result['scores']['fundamental'] = 30
@@ -529,7 +535,7 @@ def score_all_stocks():
 
     两阶段：
     1. 收集全部基本面指标，计算 Z-score 统计量
-    2. 用 Z-score 打分（基本面）+ 原逻辑打分（其他维度）
+    2. 调用 score_single_stock（传入 fund_stats）打分
 
     排名规则：浮点分数排序后，分配唯一整数排名1-49（无并列）
     板块排名：每个板块内部分配唯一整数排名1-N
@@ -557,89 +563,13 @@ def score_all_stocks():
 
     # ── 阶段二：全维度打分 ──
     print("阶段二：全维度打分...")
-    for i, ((ts_code, name, sector), fund) in enumerate(zip(ALL_STOCKS, fundamentals), 1):
+    for i, (ts_code, name, sector) in enumerate(ALL_STOCKS, 1):
         print(f"[{i}/{total}] 正在分析 {name}({ts_code})...", end="", flush=True)
         try:
-            result = {
-                'ts_code': ts_code, 'name': name, 'sector': sector,
-                'scores': {}, 'details': {},
-            }
-
-            # 基本面（用 Z-score）
-            if fund and 'error' not in fund:
-                result['scores']['fundamental'] = score_fundamental(fund, stats=fund_stats)
-                result['details']['fundamental'] = fund
-            else:
-                result['scores']['fundamental'] = 30
-
-            # 估值
-            try:
-                val = calc_valuation_percentile(ts_code)
-                if 'error' not in val:
-                    result['scores']['valuation'] = score_valuation(val)
-                    result['details']['valuation'] = val
-                else:
-                    result['scores']['valuation'] = 50
-            except Exception as e:
-                logger.warning(f"{ts_code} 估值分析失败: {e}")
-                result['scores']['valuation'] = 50
-
-            # 技术面 + 动量
-            try:
-                tech = calc_technical_indicators(ts_code)
-                if 'error' not in tech:
-                    result['scores']['technical'] = score_technical(tech)
-                    result['scores']['momentum'] = score_momentum(tech)
-                    result['details']['technical'] = tech
-                else:
-                    result['scores']['technical'] = 50
-                    result['scores']['momentum'] = 50
-            except Exception as e:
-                logger.warning(f"{ts_code} 技术面/动量分析失败: {e}")
-                result['scores']['technical'] = 50
-                result['scores']['momentum'] = 50
-
-            # 异常检测
-            try:
-                anomaly = detect_anomalies(ts_code)
-                result['scores']['anomaly'] = score_anomaly(anomaly)
-                result['details']['anomaly'] = anomaly
-            except Exception as e:
-                logger.warning(f"{ts_code} 异常检测失败: {e}")
-                result['scores']['anomaly'] = 80
-
-            # 综合加权
-            weights = {
-                'fundamental': 0.20, 'valuation': 0.15,
-                'technical': 0.30, 'momentum': 0.25, 'anomaly': 0.10,
-            }
-            total_score = 0
-            total_weight = 0
-            for factor, weight in weights.items():
-                s = result['scores'].get(factor)
-                if s is not None:
-                    total_score += s * weight
-                    total_weight += weight
-            if total_weight > 0:
-                result['total_score'] = round(total_score / total_weight * (sum(weights.values()) / total_weight), 1)
-            else:
-                result['total_score'] = 0
-
-            # summary
-            tech = result['details'].get('technical', {})
-            result['summary'] = {
-                'fundamental': f"ROE={_safe_float(result['details'].get('fundamental', {}).get('ROE'), '--')}% "
-                               f"毛利率={_safe_float(result['details'].get('fundamental', {}).get('毛利率'), '--')}%",
-                'valuation': f"PE分位={_safe_float(result['details'].get('valuation', {}).get('pe_ttm_percentile'), '--')}% "
-                             f"PB分位={_safe_float(result['details'].get('valuation', {}).get('pb_percentile'), '--')}%",
-                'technical': f"趋势={tech.get('ma_trend', '--')} "
-                             f"MACD={tech.get('macd_signal', '--')}",
-                'momentum': f"5日涨幅={_safe_float(tech.get('pct_5d'), '--')}% "
-                            f"20日涨幅={_safe_float(tech.get('pct_20d'), '--')}%",
-            }
-
-            results.append(result)
-            print(f" 综合评分: {result['total_score']}")
+            r = score_single_stock(ts_code, name, fund_stats=fund_stats)
+            r['sector'] = sector
+            results.append(r)
+            print(f" 综合评分: {r['total_score']}")
         except Exception as e:
             print(f" 失败: {e}")
             results.append({
