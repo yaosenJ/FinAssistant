@@ -315,13 +315,13 @@ def _generate_selection_reason(r, is_selected):
         if sector_rank <= 2:
             reasons.append(f"{sector}内排名第{sector_rank}名，板块龙头")
 
-        # 优势维度
+        # 优势维度（Z-score 映射后基准为 50，>=55 为相对优势）
         advantages = []
-        if scores.get('fundamental', 0) >= 65:
+        if scores.get('fundamental', 0) >= 55:
             advantages.append("基本面")
-        if scores.get('valuation', 0) >= 65:
+        if scores.get('valuation', 0) >= 55:
             advantages.append("估值")
-        if scores.get('technical', 0) >= 65:
+        if scores.get('technical', 0) >= 55:
             advantages.append("技术面")
         if advantages:
             reasons.append(f"优势维度: {'/'.join(advantages)}")
@@ -344,13 +344,13 @@ def _generate_selection_reason(r, is_selected):
         elif medium_count > 0:
             reasons.append("检测到MEDIUM级财务异常")
 
-        # 短板维度
+        # 短板维度（Z-score 映射后基准为 50，<45 为相对弱势）
         weaknesses = []
-        if scores.get('valuation', 50) < 45:
+        if scores.get('valuation', 0) < 45:
             weaknesses.append("估值")
-        if scores.get('fundamental', 50) < 45:
+        if scores.get('fundamental', 0) < 45:
             weaknesses.append("基本面")
-        if scores.get('technical', 50) < 45:
+        if scores.get('technical', 0) < 45:
             weaknesses.append("技术面")
         if weaknesses:
             reasons.append(f"短板维度: {'/'.join(weaknesses)}")
@@ -396,12 +396,12 @@ def generate_stock_report(ts_code, name, sector, score_result, all_results=None)
 
     symbol = ts_code.split('.')[0]
 
-    # 计算综合评级
-    if total_score >= 70:
+    # 计算综合评级（Z-score 映射后分数范围约 40-70，阈值相应调整）
+    if total_score >= 62:
         overall_rating = '优'
-    elif total_score >= 55:
+    elif total_score >= 53:
         overall_rating = '良'
-    elif total_score >= 40:
+    elif total_score >= 45:
         overall_rating = '中'
     else:
         overall_rating = '差'
