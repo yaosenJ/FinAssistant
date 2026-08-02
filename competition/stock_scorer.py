@@ -361,12 +361,94 @@ def score_anomaly(anomaly_text):
     return max(0, min(100, score))
 
 
-def score_momentum(tech_data):
+# 动量 Z-score 指标配置：(指标key, 权重, 是否正向)
+MOMENTUM_Z_FIELDS = [
+    ('pct_5d',         0.30, True),   # 近5日收益率，正向
+    ('pct_10d',        0.20, True),   # 近10日收益率，正向
+    ('pct_20d',        0.20, True),   # 近20日收益率，正向
+    ('vol_ratio',      0.15, True),   # 量比，正向（放量=资金流入）
+    ('volatility_20d', 0.15, False),  # 20日波动率，反向（高波动=高风险）
+]
+
+
+def _compute_momentum_stats(all_tech_data):
+    """计算 49 只股票动量指标的 mean 和 std（用于 Z-score）
+
+    Args:
+        all_tech_data: list[dict]，每只股票的 calc_technical_indicators 返回值
+
+    Returns:
+        dict: {field_name: {'mean': float, 'std': float}}
+    """
+    import statistics
+    raw = {field: [] for field, _, _ in MOMENTUM_Z_FIELDS}
+
+    for tech in all_tech_data:
+        for field, _, _ in MOMENTUM_Z_FIELDS:
+            val = _safe_float(tech.get(field))
+            if val is not None:
+                raw[field].append(val)
+
+    stats = {}
+    for field, _, _ in MOMENTUM_Z_FIELDS:
+        values = raw[field]
+        if len(values) >= 2:
+            mean = statistics.mean(values)
+            std = statistics.stdev(values)
+        elif len(values) == 1:
+            mean = values[0]
+            std = 0
+        else:
+            mean = 0
+            std = 0
+        stats[field] = {'mean': mean, 'std': std}
+
+    return stats
+
+
+def score_momentum(tech_data, stats=None):
     """动量评分 (0-100)
 
-    基于近5/10/20日收益率、量比、波动率
-    短期动量强势加分，波动率过高扣分
+    Args:
+        tech_data: 单只股票的技术指标 dict
+        stats: 可选，_compute_momentum_stats 的返回值。
+               提供时使用 Z-score 标准化；否则退回原硬编码阈值逻辑。
     """
+    if stats is not None:
+        return _score_momentum_zscore(tech_data, stats)
+    return _score_momentum_legacy(tech_data)
+
+
+def _score_momentum_zscore(tech_data, stats):
+    """Z-score 标准化动量评分"""
+    weighted_z = 0
+    total_weight = 0
+
+    for field, weight, positive in MOMENTUM_Z_FIELDS:
+        val = _safe_float(tech_data.get(field))
+        if val is None:
+            continue
+
+        s = stats.get(field, {})
+        mean = s.get('mean', 0)
+        std = s.get('std', 0)
+
+        z = _z_score(val, mean, std)
+        if not positive:
+            z = -z
+
+        weighted_z += z * weight
+        total_weight += weight
+
+    if total_weight > 0:
+        weighted_z /= total_weight
+
+    score = 50 + weighted_z * 10
+    return max(0, min(100, round(score, 1)))
+
+
+def _score_momentum_legacy(tech_data):
+    """原硬编码阈值动量评分（兼容模式）"""
     score = 50
 
     pct_5d = _safe_float(tech_data.get('pct_5d'))
@@ -375,7 +457,6 @@ def score_momentum(tech_data):
     vol_ratio = _safe_float(tech_data.get('vol_ratio'))
     volatility = _safe_float(tech_data.get('volatility_20d'))
 
-    # 短期动量（近5日收益率）
     if pct_5d is not None:
         if pct_5d > 5:
             score += 15
@@ -388,7 +469,6 @@ def score_momentum(tech_data):
         elif pct_5d < -2:
             score -= 10
 
-    # 中期动量（近10日收益率）
     if pct_10d is not None:
         if pct_10d > 8:
             score += 10
@@ -399,7 +479,6 @@ def score_momentum(tech_data):
         elif pct_10d < -3:
             score -= 5
 
-    # 趋势确认（近20日收益率）
     if pct_20d is not None:
         if pct_20d > 10:
             score += 10
@@ -410,32 +489,31 @@ def score_momentum(tech_data):
         elif pct_20d < -5:
             score -= 5
 
-    # 量比（资金流入）
     if vol_ratio is not None:
         if vol_ratio > 1.5:
-            score += 8  # 明显放量
+            score += 8
         elif vol_ratio > 1.0:
-            score += 4  # 温和放量
+            score += 4
         elif vol_ratio < 0.5:
-            score -= 5  # 明显缩量
+            score -= 5
 
-    # 波动率（越低越稳定）
     if volatility is not None:
         if volatility < 20:
-            score += 5  # 低波动
+            score += 5
         elif volatility > 40:
-            score -= 8  # 高波动风险
+            score -= 8
 
     return max(0, min(100, score))
 
 
-def score_single_stock(ts_code, name, fund_stats=None):
+def score_single_stock(ts_code, name, fund_stats=None, mom_stats=None):
     """对单只股票进行全维度打分
 
     Args:
         ts_code: 股票代码
         name: 股票名称
         fund_stats: 可选，基本面 Z-score 统计量。提供时基本面用 Z-score，否则用 legacy。
+        mom_stats: 可选，动量 Z-score 统计量。提供时动量用 Z-score，否则用 legacy。
     """
     result = {
         'ts_code': ts_code,
@@ -473,7 +551,7 @@ def score_single_stock(ts_code, name, fund_stats=None):
         tech = calc_technical_indicators(ts_code)
         if 'error' not in tech:
             result['scores']['technical'] = score_technical(tech)
-            result['scores']['momentum'] = score_momentum(tech)
+            result['scores']['momentum'] = score_momentum(tech, stats=mom_stats)
             result['details']['technical'] = tech
         else:
             result['scores']['technical'] = 50
@@ -534,8 +612,8 @@ def score_all_stocks():
     """对所有49只股票打分并排名
 
     两阶段：
-    1. 收集全部基本面指标，计算 Z-score 统计量
-    2. 调用 score_single_stock（传入 fund_stats）打分
+    1. 收集全部基本面指标 + 技术面指标，计算 Z-score 统计量
+    2. 调用 score_single_stock（传入 fund_stats, mom_stats）打分
 
     排名规则：浮点分数排序后，分配唯一整数排名1-49（无并列）
     板块排名：每个板块内部分配唯一整数排名1-N
@@ -543,9 +621,10 @@ def score_all_stocks():
     results = []
     total = len(ALL_STOCKS)
 
-    # ── 阶段一：收集基本面指标 ──
-    print("阶段一：采集基本面数据...")
+    # ── 阶段一：收集基本面 + 技术面指标 ──
+    print("阶段一：采集数据...")
     fundamentals = []
+    tech_data_list = []
     for i, (ts_code, name, sector) in enumerate(ALL_STOCKS, 1):
         print(f"  [{i}/{total}] {name}({ts_code})", end="", flush=True)
         try:
@@ -553,20 +632,31 @@ def score_all_stocks():
             if 'error' in fund:
                 fund = {}
             fundamentals.append(fund)
-            print(" OK")
         except Exception as e:
-            print(f" 失败: {e}")
+            print(f" 基本面失败: {e}", end="")
             fundamentals.append({})
 
+        try:
+            tech = calc_technical_indicators(ts_code)
+            if 'error' in tech:
+                tech = {}
+            tech_data_list.append(tech)
+        except Exception as e:
+            print(f" 技术面失败: {e}", end="")
+            tech_data_list.append({})
+
+        print(" OK")
+
     fund_stats = _compute_fundamental_stats(fundamentals)
-    print(f"基本面统计量已计算（{len(fundamentals)}只股票）\n")
+    mom_stats = _compute_momentum_stats(tech_data_list)
+    print(f"统计量已计算（{len(fundamentals)}只股票）\n")
 
     # ── 阶段二：全维度打分 ──
     print("阶段二：全维度打分...")
     for i, (ts_code, name, sector) in enumerate(ALL_STOCKS, 1):
         print(f"[{i}/{total}] 正在分析 {name}({ts_code})...", end="", flush=True)
         try:
-            r = score_single_stock(ts_code, name, fund_stats=fund_stats)
+            r = score_single_stock(ts_code, name, fund_stats=fund_stats, mom_stats=mom_stats)
             r['sector'] = sector
             results.append(r)
             print(f" 综合评分: {r['total_score']}")
