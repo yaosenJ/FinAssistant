@@ -331,7 +331,7 @@ def _calc_growth_rates(ts_code, report_date, is_bank):
     - Q1 vs 上年Q4    例：2026Q1 vs 2025Q4
     - Q2 vs 本年Q1    例：2026Q2 vs 2026Q1
     - Q3 vs 本年Q2    例：2026Q3 vs 2026Q2
-    - Q4 vs 本年Q3    例：2025Q4 vs 2025Q3
+    - Q4 vs 本年Q3    例：2026Q4 vs 2026Q3
 
     示例（贵州茅台）：
     ┌─────────┬──────────┬──────────┬────────┬──────────┬──────────┐
@@ -355,8 +355,13 @@ def _calc_growth_rates(ts_code, report_date, is_bank):
         return _extract_field(income_data, '营业总收入', '营业收入')
 
     def _np(income_data):
-        """获取净利润"""
-        return _extract_field(income_data, '净利润', '归属于母公司所有者的净利润')
+        """获取净利润（区分银行股和非银行股）"""
+        if is_bank:
+            # 银行股：归属于母公司的净利润
+            return _extract_field(income_data, '净利润', '归属于母公司的净利润')
+        else:
+            # 非银行股：归属于母公司所有者的净利润
+            return _extract_field(income_data, '净利润', '归属于母公司所有者的净利润')
 
     curr_revenue = _rev(curr_income)
     curr_np_val = _np(curr_income)
