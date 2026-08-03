@@ -104,11 +104,21 @@ def _safe_str(val, fmt='{}'):
 
 
 def _safe_pct(val):
-    """安全百分比"""
+    """安全百分比（带正负号，用于增长率）"""
     if val is None:
         return '--'
     try:
         return f"{float(val):+.2f}%"
+    except (ValueError, TypeError):
+        return '--'
+
+
+def _safe_pct_abs(val):
+    """安全百分比（无正负号，用于绝对值如毛利率）"""
+    if val is None:
+        return '--'
+    try:
+        return f"{float(val):.2f}%"
     except (ValueError, TypeError):
         return '--'
 
@@ -433,9 +443,8 @@ def generate_stock_report(ts_code, name, sector, score_result, all_results=None)
 
     ar_ratio = fund.get('应收账款占比')
     if ar_ratio is not None and ar_ratio > 30:
-        main_risks.append(f"应收账款占比+{ar_ratio}%，回款风险较高")
+        main_risks.append(f"应收账款占比{ar_ratio}%，回款风险较高")
 
-    cf_ratio = fund.get('经营现金流净利润比')
     if cf_ratio is not None and cf_ratio < 0:
         main_risks.append("现金流质量较差，利润缺乏现金支撑")
 
@@ -478,14 +487,14 @@ def generate_stock_report(ts_code, name, sector, score_result, all_results=None)
 
 | 指标 | 数值 | 评级 | 说明 |
 |------|------|------|------|
-| 毛利率/营业利润率 | {_safe_pct(fund.get('毛利率'))} | {_get_rating(fund.get('毛利率'), [40, 25, 15])} | 越高越好，反映产品竞争力 |
-| 净利率 | {_safe_pct(fund.get('净利率'))} | {_get_rating(fund.get('净利率'), [20, 12, 6])} | 综合盈利能力 |
-| ROE | {_safe_pct(fund.get('ROE'))} | {_get_rating(fund.get('ROE'), [18, 12, 6])} | 股东回报率 |
+| 毛利率/营业利润率 | {_safe_pct_abs(fund.get('毛利率'))} | {_get_rating(fund.get('毛利率'), [40, 25, 15])} | 越高越好，反映产品竞争力 |
+| 净利率 | {_safe_pct_abs(fund.get('净利率'))} | {_get_rating(fund.get('净利率'), [20, 12, 6])} | 综合盈利能力 |
+| ROE | {_safe_pct_abs(fund.get('ROE'))} | {_get_rating(fund.get('ROE'), [18, 12, 6])} | 股东回报率 |
 
 **杜邦拆解:**
 | 指标 | 数值 | 说明 |
 |------|------|------|
-| 杜邦_净利率 | {_safe_pct(fund.get('杜邦_净利率'))} | ROE = 净利率 × 周转率 × 权益乘数 |
+| 杜邦_净利率 | {_safe_pct_abs(fund.get('杜邦_净利率'))} | ROE = 净利率 × 周转率 × 权益乘数 |
 | 杜邦_总资产周转率 | {_safe_str(fund.get('杜邦_总资产周转率'))} | 反映资产运营效率 |
 | 杜邦_权益乘数 | {_safe_str(fund.get('杜邦_权益乘数'))} | 反映杠杆水平 |
 
@@ -500,8 +509,8 @@ def generate_stock_report(ts_code, name, sector, score_result, all_results=None)
 | 指标 | 数值 | 评级 | 说明 |
 |------|------|------|------|
 | 经营现金流/净利润 | {_safe_str(fund.get('经营现金流净利润比'))} | {_get_rating(fund.get('经营现金流净利润比'), [1.2, 0.8, 0.5])} | >1说明利润有现金支撑 |
-| 应收账款/营收 | {_safe_pct(fund.get('应收账款占比'))} | {_get_rating(-(fund.get('应收账款占比') or 0), [-10, -20, -30])} | 越低越好，回款风险小 |
-| 资产负债率 | {_safe_pct(fund.get('资产负债率'))} | {_get_rating(-(fund.get('资产负债率') or 0), [-30, -50, -70])} | 越低越安全 |
+| 应收账款/营收 | {_safe_pct_abs(fund.get('应收账款占比'))} | {_get_rating(-(fund.get('应收账款占比') or 0), [-10, -20, -30])} | 越低越好，回款风险小 |
+| 资产负债率 | {_safe_pct_abs(fund.get('资产负债率'))} | {_get_rating(-(fund.get('资产负债率') or 0), [-30, -50, -70])} | 越低越安全 |
 
 > 数据来源: market_data.stock_financial（现金流量表、资产负债表）
 
@@ -520,8 +529,8 @@ def generate_stock_report(ts_code, name, sector, score_result, all_results=None)
 
 | 指标 | 当前值 | 历史分位 | 估值评级 |
 |------|--------|----------|----------|
-| PE_TTM | {_safe_str(val.get('pe_ttm'))} | {_safe_pct(val.get('pe_ttm_percentile'))} | {_safe_str(val.get('pe_ttm_level'))} |
-| PB | {_safe_str(val.get('pb'))} | {_safe_pct(val.get('pb_percentile'))} | {_safe_str(val.get('pb_level'))} |
+| PE_TTM | {_safe_str(val.get('pe_ttm'))} | {_safe_pct_abs(val.get('pe_ttm_percentile'))} | {_safe_str(val.get('pe_ttm_level'))} |
+| PB | {_safe_str(val.get('pb'))} | {_safe_pct_abs(val.get('pb_percentile'))} | {_safe_str(val.get('pb_level'))} |
 
 ![估值象限](./charts/{name}_valuation.png)
 
@@ -549,7 +558,7 @@ def generate_stock_report(ts_code, name, sector, score_result, all_results=None)
 | 近10日收益率 | {_safe_pct(tech.get('pct_10d'))} | -- |
 | 近20日收益率 | {_safe_pct(tech.get('pct_20d'))} | -- |
 | 量比(5/20) | {_safe_str(tech.get('vol_ratio'))} | {'放量' if (tech.get('vol_ratio') or 0) > 1.5 else '缩量' if (tech.get('vol_ratio') or 0) < 0.7 else '温和'} |
-| 20日波动率(年化) | {_safe_pct(tech.get('volatility_20d'))} | -- |
+| 20日波动率(年化) | {_safe_pct_abs(tech.get('volatility_20d'))} | -- |
 
 ![动量趋势](./charts/{name}_momentum.png)
 
@@ -565,7 +574,7 @@ def generate_stock_report(ts_code, name, sector, score_result, all_results=None)
 
 > 数据来源: market_data.stock_financial（7类财务异常规则检测）
 
-## 九、综合评估
+## 十、综合评估
 
 综合评级: **{overall_rating}**
 
@@ -589,8 +598,8 @@ def generate_stock_report(ts_code, name, sector, score_result, all_results=None)
 
 | 指标 | 本公司 | 行业均值 | 对比 |
 |------|--------|----------|------|
-| 毛利率 | {_safe_pct(fund.get('毛利率'))} | {_safe_pct(_calc_sector_avg(all_results, sector, 'fundamental', '毛利率'))} | {_compare_indicator(fund.get('毛利率'), _calc_sector_avg(all_results, sector, 'fundamental', '毛利率'))} |
-| ROE | {_safe_pct(fund.get('ROE'))} | {_safe_pct(_calc_sector_avg(all_results, sector, 'fundamental', 'ROE'))} | {_compare_indicator(fund.get('ROE'), _calc_sector_avg(all_results, sector, 'fundamental', 'ROE'))} |
+| 毛利率 | {_safe_pct_abs(fund.get('毛利率'))} | {_safe_pct_abs(_calc_sector_avg(all_results, sector, 'fundamental', '毛利率'))} | {_compare_indicator(fund.get('毛利率'), _calc_sector_avg(all_results, sector, 'fundamental', '毛利率'))} |
+| ROE | {_safe_pct_abs(fund.get('ROE'))} | {_safe_pct_abs(_calc_sector_avg(all_results, sector, 'fundamental', 'ROE'))} | {_compare_indicator(fund.get('ROE'), _calc_sector_avg(all_results, sector, 'fundamental', 'ROE'))} |
 | 营收增长率 | {_safe_pct(fund.get('营收同比增长率'))} | {_safe_pct(_calc_sector_avg(all_results, sector, 'fundamental', '营收同比增长率'))} | {_compare_indicator(fund.get('营收同比增长率'), _calc_sector_avg(all_results, sector, 'fundamental', '营收同比增长率'))} |
 
 ### 估值对比
@@ -660,7 +669,7 @@ def save_reports(portfolio, score_results, output_dir):
         name = r.get('name', symbol)
         sector = r.get('sector', '')
 
-        report = generate_stock_report(ts_code, name, sector, r)
+        report = generate_stock_report(ts_code, name, sector, r, all_results=score_results)
 
         filepath = os.path.join(output_dir, f"{symbol}.md")
         with open(filepath, 'w', encoding='utf-8') as f:
@@ -729,7 +738,7 @@ def generate_summary_report(portfolio, score_results):
         stock_details += f"\n**{i}. {s['name']}({s['symbol']}) — 仓位 {s['weight']*100:.2f}%**\n"
         stock_details += f"- 全局排名: 第{s['rank']}名 | 板块内排名: 第{s['sector_rank']}名（{s['sector']}）\n"
         stock_details += f"- **入选理由**: {s['reason']}\n"
-        stock_details += f"- 基本面: ROE{_safe_pct(fund.get('ROE'))} 毛利率{_safe_pct(fund.get('毛利率'))}\n"
+        stock_details += f"- 基本面: ROE{_safe_pct_abs(fund.get('ROE'))} 毛利率{_safe_pct_abs(fund.get('毛利率'))}\n"
         stock_details += f"- 估值: PE{_safe_str(val.get('pe_ttm'))} PB{_safe_str(val.get('pb'))}\n"
         stock_details += f"- 动量: 5日涨幅{_safe_pct(tech.get('pct_5d'))} 20日涨幅{_safe_pct(tech.get('pct_20d'))}\n"
 
