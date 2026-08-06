@@ -305,8 +305,8 @@ Top 10:
 - [x] `tools/financial_query.py` — 财务数据查询工具（已完成）
 - [x] `tools/financial_compare.py` — 财务对比分析工具（已完成）
 - [x] `tools/financial_anomaly.py` — 异常指标检测工具（已完成）
-- [ ] `tools/financial_score.py` — 财务健康度评分工具
-- [ ] `agents/financial_agent.py` — 财务问答 Agent 编排
+- [x] `tools/financial_score.py` — 财务健康度评分工具（已完成）
+- [x] `agents/financial_agent.py` — 财务问答智能体（已完成）
 - [ ] `rag/financial_embedding.py` — 财务报表向量化入库
 
 ---
@@ -1255,7 +1255,77 @@ python agents/correlation_agent.py
 
 ---
 
-### 5.8 工具函数与已有代码的对照
+### 5.8 财务健康度评分工具
+
+#### tools/financial_score.py — 财务健康度评分工具
+
+对 A 股上市公司进行四维度综合评分，输出 0-100 的财务健康度评分和优/良/中/差评级。
+
+**评分维度**：
+
+| 维度 | 权重 | 指标 |
+|------|------|------|
+| 盈利能力 | 30% | ROE(40%) + 毛利率(30%) + 净利率(30%) |
+| 成长性 | 25% | 营收同比增速(50%) + 净利润同比增速(50%) |
+| 安全性 | 25% | 资产负债率(40%) + 经营现金流/净利润(35%) + 应收账款占比(25%) |
+| 盈利质量 | 20% | 扣非净利率占比(50%) + 经营现金流持续性(50%) |
+
+**异常检测扣分**：HIGH -5分，MEDIUM -2分，最多扣15分。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `calc_financial_score(ts_code, report_date=None)` | 计算单股财务健康度评分 |
+| `format_financial_score(ts_code, report_date=None)` | 格式化 Markdown 输出 |
+| `score_sector(sector_name, sector_type, top_n)` | 批量评分板块内成分股 |
+
+**运行方式**：
+
+```bash
+python tools/financial_score.py --ts_code 600519.SH
+python tools/financial_score.py --sector 白酒 --top_n 10
+python tools/financial_score.py --ts_codes 600519.SH,300750.SZ,601318.SH
+```
+
+---
+
+### 5.9 财务问答智能体
+
+#### agents/financial_agent.py — 财务问答智能体
+
+整合财务指标计算、趋势分析、财务对比、异常检测、财务健康度评分、批量筛选等工具组，支持复杂的财务分析问答。
+
+**工具组划分**：
+
+| 工具组 | 工具 | 说明 |
+|--------|------|------|
+| fundamental | `calc_fundamental_indicators` / `calc_fundamental_trend` / `get_financial_data` / `get_report_dates` | 财务指标计算 |
+| compare | `compare_companies` / `compare_periods` | 财务对比与趋势 |
+| score-anomaly | `format_financial_score` / `calc_financial_score` / `detect_anomalies` | 评分与异常检测 |
+| screening | `screen_cashflow_positive_stocks` / `screen_margin_decline_stocks` / `screen_roe_stocks` | 批量筛选 |
+| query | `query_financial_data` | 财务数据查询 |
+
+**可回答的问题**：
+
+```
+"近一年经营活动现金流持续为正的银行股有哪些？"
+"对比宁德时代和比亚迪的资产负债率变化趋势"
+"哪些公司最近一个季度毛利率下降超过10%？"
+"给我一份贵州茅台的杜邦分析"
+"找出ROE连续三年超过20%的公司"
+"茅台的财务健康度评分是多少？"
+```
+
+**运行方式**：
+
+```bash
+python agents/financial_agent.py
+```
+
+---
+
+### 5.10 工具函数与已有代码的对照
 
 | 现有 langgraph_getdata/ | 新 tools/ | 说明 |
 |---|---|---|
@@ -1272,8 +1342,10 @@ python agents/correlation_agent.py
 | （无） | `stock_sector_mapping.py` | 个股-板块映射（已完成） |
 | （无） | `sector_financial_agg.py` | 板块财务聚合（已完成） |
 | （无） | `news_stock_linker.py` | 新闻-行情关联（已完成） |
+| （无） | `financial_score.py` | 财务健康度评分（已完成） |
+| （无） | `sector_data.py` | 板块数据工具（已完成） |
 
-### 5.9 依赖安装
+### 5.11 依赖安装
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn

@@ -303,8 +303,8 @@ Top 10:
 - [x] `tools/financial_query.py` — Financial data query tool (Done)
 - [x] `tools/financial_compare.py` — Financial comparison tool (Done)
 - [x] `tools/financial_anomaly.py` — Anomaly detection tool (Done)
-- [ ] `tools/financial_score.py` — Financial health scoring
-- [ ] `agents/financial_agent.py` — Financial Q&A agent
+- [x] `tools/financial_score.py` — Financial health scoring tool (Done)
+- [x] `agents/financial_agent.py` — Financial Q&A agent (Done)
 - [ ] `rag/financial_embedding.py` — Financial statement vectorization
 
 ---
@@ -985,7 +985,76 @@ python agents/correlation_agent.py
 
 ---
 
-### 5.8 Tool Function Mapping
+### 5.8 Financial Health Scoring Tool
+
+#### tools/financial_score.py — Financial Health Scoring Tool
+
+Computes a four-dimension composite financial health score (0-100) with rating (Excellent/Good/Fair/Poor).
+
+**Scoring Dimensions**:
+
+| Dimension | Weight | Indicators |
+|-----------|--------|------------|
+| Profitability | 30% | ROE(40%) + Gross Margin(30%) + Net Margin(30%) |
+| Growth | 25% | Revenue YoY Growth(50%) + Net Profit YoY Growth(50%) |
+| Safety | 25% | Debt Ratio(40%) + Cash Flow/NP(35%) + AR Ratio(25%) |
+| Quality | 20% | Deducted NP Ratio(50%) + Cash Flow Consistency(50%) |
+
+**Anomaly Deduction**: HIGH -5pts, MEDIUM -2pts, max -15pts.
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `calc_financial_score(ts_code, report_date=None)` | Calculate single stock financial health score |
+| `format_financial_score(ts_code, report_date=None)` | Generate formatted Markdown output |
+| `score_sector(sector_name, sector_type, top_n)` | Batch score sector constituents |
+
+**Run**:
+
+```bash
+python tools/financial_score.py --ts_code 600519.SH
+python tools/financial_score.py --sector 白酒 --top_n 10
+python tools/financial_score.py --ts_codes 600519.SH,300750.SZ,601318.SH
+```
+
+---
+
+### 5.9 Financial Q&A Agent
+
+#### agents/financial_agent.py — Financial Q&A Agent
+
+Integrates fundamental indicators, trend analysis, comparison, anomaly detection, financial scoring, and batch screening tool groups for complex financial Q&A.
+
+**Tool Group Structure**:
+
+| Tool Group | Tools | Description |
+|------------|-------|-------------|
+| fundamental | `calc_fundamental_indicators` / `calc_fundamental_trend` / `get_financial_data` / `get_report_dates` | Financial indicator calculation |
+| compare | `compare_companies` / `compare_periods` | Financial comparison and trends |
+| score-anomaly | `format_financial_score` / `calc_financial_score` / `detect_anomalies` | Scoring and anomaly detection |
+| screening | `screen_cashflow_positive_stocks` / `screen_margin_decline_stocks` / `screen_roe_stocks` | Batch screening |
+| query | `query_financial_data` | Financial data query |
+
+**Example Queries**:
+
+```
+"Which banks have positive operating cash flow for the past year?"
+"Compare CATL and BYD's debt ratio trends"
+"Which companies had gross margin drop > 10% last quarter?"
+"Give me a DuPont analysis for Kweichow Moutai"
+"Find companies with ROE > 20% for 3 consecutive years"
+```
+
+**Run**:
+
+```bash
+python agents/financial_agent.py
+```
+
+---
+
+### 5.10 Tool Function Mapping
 
 | Existing langgraph_getdata/ | New tools/ | Description |
 |---|---|---|
@@ -1002,8 +1071,10 @@ python agents/correlation_agent.py
 | (None) | `stock_sector_mapping.py` | Stock-sector mapping (Done) |
 | (None) | `sector_financial_agg.py` | Sector financial aggregation (Done) |
 | (None) | `news_stock_linker.py` | News-stock correlation (Done) |
+| (None) | `financial_score.py` | Financial health scoring (Done) |
+| (None) | `sector_data.py` | Sector data utilities (Done) |
 
-### 5.9 Dependencies
+### 5.11 Dependencies
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn
