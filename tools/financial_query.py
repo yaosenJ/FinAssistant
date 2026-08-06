@@ -272,6 +272,380 @@ def query_financial_data(
     return output
 
 
+# ──────────────────────────────────────────────────────────────
+# 批量筛选函数
+# ──────────────────────────────────────────────────────────────
+
+def _get_stock_name(ts_code):
+    """获取股票名称"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT stock_name FROM company_info WHERE ts_code = %s LIMIT 1", (ts_code,))
+            row = cursor.fetchone()
+            return row[0] if row else ts_code
+    finally:
+        conn.close()
+
+
+def _get_all_ts_codes(sector_name=None, sector_type='industry'):
+    """获取全部或板块内的 ts_code 列表"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            if sector_name:
+                table = 'sector_industry_daily' if sector_type == 'industry' else 'sector_concept_daily'
+                cons_table = 'sector_industry_cons' if sector_type == 'industry' else 'sector_concept_cons'
+                cursor.execute(f"SELECT DISTINCT sector_code FROM {table} WHERE sector_name LIKE %s", (f'%{sector_name}%',))
+                row = cursor.fetchone()
+                if not row:
+                    return []
+                cursor.execute(f"SELECT stock_code FROM {cons_table} WHERE sector_code = %s", (row[0],))
+                symbols = [r[0] for r in cursor.fetchall()]
+                if not symbols:
+                    return []
+                placeholders = ','.join(['%s'] * len(symbols))
+                cursor.execute(f"SELECT ts_code FROM company_info WHERE symbol IN ({placeholders})", (*symbols,))
+                return [r[0] for r in cursor.fetchall()]
+            else:
+                cursor.execute("SELECT ts_code FROM company_info")
+                return [r[0] for r in cursor.fetchall()]
+    finally:
+        conn.close()
+
+
+def _extract_field(data, *field_names):
+    """从报表 JSON 中按优先级提取字段值"""
+    if not data:
+        return None
+    for name in field_names:
+        val = data.get(name)
+        if val is not None:
+            f = _safe_float(val)
+            if f is not None:
+                return f
+    return None
+
+
+def _get_cashflow_reports(ts_code, periods=4):
+    """获取最近 N 期现金流量表"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """SELECT report_date, report_data FROM stock_financial
+                     WHERE ts_code=%s AND statement_type='cashflow'
+                     ORDER BY report_date DESC LIMIT %s"""
+            cursor.execute(sql, (ts_code, periods))
+            results = []
+            for row in cursor.fetchall():
+                data = row[1]
+                if isinstance(data, str):
+                    data = json.loads(data)
+                results.append({'report_date': row[0], **data})
+            return results
+    finally:
+        conn.close()
+
+
+def _get_income_reports(ts_code, periods=2):
+    """获取最近 N 期利润表"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """SELECT report_date, report_data FROM stock_financial
+                     WHERE ts_code=%s AND statement_type='income'
+                     ORDER BY report_date DESC LIMIT %s"""
+            cursor.execute(sql, (ts_code, periods))
+            results = []
+            for row in cursor.fetchall():
+                data = row[1]
+                if isinstance(data, str):
+                    data = json.loads(data)
+                results.append({'report_date': row[0], **data})
+            return results
+    finally:
+        conn.close()
+
+
+def _get_balance_reports(ts_code, periods=4):
+    """获取最近 N 期资产负债表"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """SELECT report_date, report_data FROM stock_financial
+                     WHERE ts_code=%s AND statement_type='balance'
+                     ORDER BY report_date DESC LIMIT %s"""
+            cursor.execute(sql, (ts_code, periods))
+            results = []
+            for row in cursor.fetchall():
+                data = row[1]
+                if isinstance(data, str):
+                    data = json.loads(data)
+                results.append({'report_date': row[0], **data})
+            return results
+    finally:
+        conn.close()
+
+
+def _get_income_with_prev(ts_code):
+    """获取最新一期和上一期利润表（用于同比）"""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """SELECT report_date, report_data FROM stock_financial
+                     WHERE ts_code=%s AND statement_type='income'
+                     ORDER BY report_date DESC LIMIT 2"""
+            cursor.execute(sql, (ts_code,))
+            rows = cursor.fetchall()
+            results = []
+            for row in rows:
+                data = row[1]
+                if isinstance(data, str):
+                    data = json.loads(data)
+                results.append({'report_date': str(row[0]), **data})
+            return results
+    finally:
+        conn.close()
+
+
+def screen_cashflow_positive_stocks(sector_name=None, periods=4, min_positive_ratio=1.0):
+    """筛选经营活动现金流持续为正的股票
+
+    Args:
+        sector_name: 板块名称（如"银行"），None 表示全市场
+        periods: 检查最近 N 期
+        min_positive_ratio: 正值占比阈值（1.0 = 每期都为正）
+
+    Returns:
+        str: 格式化的筛选结果
+    """
+    ts_codes = _get_all_ts_codes(sector_name)
+    if not ts_codes:
+        return f"未找到{'板块 ' + sector_name if sector_name else '全市场'}的股票列表"
+
+    passed = []
+    for code in ts_codes:
+        reports = _get_cashflow_reports(code, periods)
+        if len(reports) < 2:
+            continue
+        positive = sum(1 for r in reports if _extract_field(r, '经营活动产生的现金流量净额') is not None
+                       and _extract_field(r, '经营活动产生的现金流量净额') > 0)
+        total = len(reports)
+        if total > 0 and positive / total >= min_positive_ratio:
+            name = _get_stock_name(code)
+            latest_cf = _extract_field(reports[0], '经营活动产生的现金流量净额')
+            passed.append({
+                'ts_code': code, 'name': name,
+                'positive_count': positive, 'total': total,
+                'latest_cf': latest_cf,
+            })
+
+    passed.sort(key=lambda x: x['latest_cf'] or 0, reverse=True)
+
+    scope = f"[{sector_name}]板块" if sector_name else "全市场"
+    lines = [
+        f"=== {scope} 经营现金流持续为正筛选 ===",
+        f"筛选条件: 最近{periods}期中正值占比 >= {min_positive_ratio:.0%}",
+        f"符合条件: {len(passed)}只",
+        "",
+        "| 排名 | 股票 | 正值期数 | 最新经营现金流 |",
+        "|------|------|----------|----------------|",
+    ]
+    for i, s in enumerate(passed[:30], 1):
+        cf_str = f"{s['latest_cf'] / 1e8:.2f}亿" if s['latest_cf'] else "--"
+        lines.append(f"| {i} | {s['name']}({s['ts_code']}) | {s['positive_count']}/{s['total']} | {cf_str} |")
+
+    if len(passed) > 30:
+        lines.append(f"\n...共{len(passed)}只，仅显示前30只")
+
+    return "\n".join(lines)
+
+
+def screen_margin_decline_stocks(threshold=10, sector_name=None):
+    """筛选最近一个季度毛利率下降超过阈值的公司
+
+    Args:
+        threshold: 下降百分点阈值（默认10）
+        sector_name: 板块名称，None 表示全市场
+
+    Returns:
+        str: 格式化的筛选结果
+    """
+    ts_codes = _get_all_ts_codes(sector_name)
+    if not ts_codes:
+        return "未找到股票列表"
+
+    declined = []
+    for code in ts_codes:
+        reports = _get_income_with_prev(code)
+        if len(reports) < 2:
+            continue
+
+        curr = reports[0]
+        prev = reports[1]
+
+        curr_rev = _extract_field(curr, '营业总收入', '营业收入')
+        curr_cost = _extract_field(curr, '营业成本')
+        prev_rev = _extract_field(prev, '营业总收入', '营业收入')
+        prev_cost = _extract_field(prev, '营业成本')
+
+        if not all([curr_rev, curr_cost, prev_rev, prev_cost]):
+            continue
+        if curr_rev <= 0 or prev_rev <= 0:
+            continue
+
+        curr_margin = (curr_rev - curr_cost) / curr_rev * 100
+        prev_margin = (prev_rev - prev_cost) / prev_rev * 100
+        change = curr_margin - prev_margin
+
+        if change < -threshold:
+            name = _get_stock_name(code)
+            declined.append({
+                'ts_code': code, 'name': name,
+                'prev_margin': round(prev_margin, 2),
+                'curr_margin': round(curr_margin, 2),
+                'change': round(change, 2),
+                'curr_rd': curr.get('report_date', ''),
+            })
+
+    declined.sort(key=lambda x: x['change'])
+
+    scope = f"[{sector_name}]板块" if sector_name else "全市场"
+    lines = [
+        f"=== {scope} 毛利率下降筛选 ===",
+        f"筛选条件: 最近季度毛利率下降 > {threshold}个百分点",
+        f"符合条件: {len(declined)}只",
+        "",
+        "| 排名 | 股票 | 上期毛利率 | 本期毛利率 | 变化 |",
+        "|------|------|------------|------------|------|",
+    ]
+    for i, s in enumerate(declined[:30], 1):
+        lines.append(f"| {i} | {s['name']}({s['ts_code']}) | {s['prev_margin']}% | {s['curr_margin']}% | {s['change']:+.2f}pp |")
+
+    if len(declined) > 30:
+        lines.append(f"\n...共{len(declined)}只，仅显示前30只")
+
+    return "\n".join(lines)
+
+
+def screen_roe_stocks(min_roe=20, years=3, sector_name=None):
+    """筛选ROE连续多年超过阈值的公司
+
+    Args:
+        min_roe: ROE 最低阈值（百分比）
+        years: 连续年数
+        sector_name: 板块名称，None 表示全市场
+
+    Returns:
+        str: 格式化的筛选结果
+    """
+    ts_codes = _get_all_ts_codes(sector_name)
+    if not ts_codes:
+        return "未找到股票列表"
+
+    # 每年年报报告日期（最近N年）
+    # 用最近N期年报来判断，年报报告日期通常是 YYYY1231
+    passed = []
+    for code in ts_codes:
+        conn = get_connection()
+        try:
+            with conn.cursor() as cursor:
+                sql = """SELECT report_date, report_data FROM stock_financial
+                         WHERE ts_code=%s AND statement_type='income'
+                         ORDER BY report_date DESC LIMIT %s"""
+                cursor.execute(sql, (code, years + 2))
+                rows = cursor.fetchall()
+        finally:
+            conn.close()
+
+        if len(rows) < years:
+            continue
+
+        # 过滤出年报（报告日期以1231结尾）
+        annual_reports = []
+        for row in rows:
+            rd = str(row[0])
+            if rd.endswith('1231'):
+                data = row[1]
+                if isinstance(data, str):
+                    data = json.loads(data)
+                annual_reports.append({'report_date': rd, **data})
+
+        if len(annual_reports) < years:
+            continue
+
+        # 检查连续N年ROE
+        # ROE = 净利润 / 股东权益
+        # 需要同时获取资产负债表
+        all_above = True
+        roe_values = []
+        for ar in annual_reports[:years]:
+            np_val = _extract_field(ar, '净利润', '归属于母公司所有者的净利润', '归属于母公司股东的净利润')
+            if np_val is None:
+                all_above = False
+                break
+
+            # 获取同期资产负债表
+            rd = ar['report_date']
+            conn = get_connection()
+            try:
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT report_data FROM stock_financial WHERE ts_code=%s AND statement_type='balance' AND report_date=%s",
+                        (code, rd)
+                    )
+                    bal_row = cursor.fetchone()
+            finally:
+                conn.close()
+
+            if not bal_row:
+                all_above = False
+                break
+
+            bal_data = bal_row[0]
+            if isinstance(bal_data, str):
+                bal_data = json.loads(bal_data)
+
+            equity = _extract_field(bal_data, '归属于母公司股东权益合计', '归属于母公司所有者权益', '所有者权益（或股东权益）合计')
+            if not equity or equity <= 0:
+                all_above = False
+                break
+
+            roe = np_val / equity * 100
+            roe_values.append(round(roe, 2))
+
+            if roe < min_roe:
+                all_above = False
+                break
+
+        if all_above and len(roe_values) >= years:
+            name = _get_stock_name(code)
+            passed.append({
+                'ts_code': code, 'name': name,
+                'roe_values': roe_values,
+                'avg_roe': round(sum(roe_values) / len(roe_values), 2),
+            })
+
+    passed.sort(key=lambda x: x['avg_roe'], reverse=True)
+
+    scope = f"[{sector_name}]板块" if sector_name else "全市场"
+    lines = [
+        f"=== {scope} ROE连续{years}年>{min_roe}%筛选 ===",
+        f"符合条件: {len(passed)}只",
+        "",
+        "| 排名 | 股票 | 近年ROE | 均值 |",
+        "|------|------|---------|------|",
+    ]
+    for i, s in enumerate(passed[:30], 1):
+        roe_str = '/'.join(f"{r}%" for r in s['roe_values'])
+        lines.append(f"| {i} | {s['name']}({s['ts_code']}) | {roe_str} | {s['avg_roe']}% |")
+
+    if len(passed) > 30:
+        lines.append(f"\n...共{len(passed)}只，仅显示前30只")
+
+    return "\n".join(lines)
+
+
 if __name__ == '__main__':
     # 测试查询
     print("\n1. 查询贵州茅台最近3期利润表:")
