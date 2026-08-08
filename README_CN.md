@@ -335,9 +335,11 @@ Top 10:
 ```
 
 **待开发**：
-- [ ] `tools/market_overview.py` — 大盘概览工具
-- [ ] `tools/abnormal_detector.py` — 异动检测工具
-- [ ] `tools/daily_digest.py` — 日报生成工具
+- [x] `tools/market_overview.py` — 大盘概览工具（已完成）
+- [x] `tools/abnormal_detector.py` — 异动检测工具（已完成）
+- [x] `tools/market_trend.py` — 趋势研判工具（已完成）
+- [x] `tools/watchlist_report.py` — 自选股日报工具（已完成）
+- [x] `tools/daily_digest.py` — 日报生成工具（已完成，整合全部6大模块）
 - [ ] `agents/daily_report_agent.py` — 日报 Agent 编排
 
 ---
@@ -1325,7 +1327,161 @@ python agents/financial_agent.py
 
 ---
 
-### 5.10 工具函数与已有代码的对照
+### 5.10 市场日报工具集
+
+#### tools/market_overview.py — 大盘概览工具
+
+聚合全市场个股数据，计算当日大盘概览（涨跌家数、涨停跌停、成交额等）。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `get_market_overview(trade_date=None)` | 获取大盘概览结构化数据 |
+| `format_market_overview(trade_date=None)` | 格式化 Markdown 输出 |
+
+**输出指标**：
+
+| 指标 | 说明 |
+|------|------|
+| 涨跌家数 | 上涨/下跌/平盘家数及占比 |
+| 涨停/跌停 | 主板>=9.9%，创业板/科创板>=19.9% |
+| 总成交额 | 全市场成交额（亿元） |
+| 平均/中位数涨跌幅 | 市场整体涨跌水平 |
+| 市场情绪 | 强势普涨/偏多/震荡/偏空/弱势普跌 |
+
+**运行方式**：
+
+```bash
+python tools/market_overview.py
+python tools/market_overview.py --trade_date 20260801
+```
+
+---
+
+#### tools/abnormal_detector.py — 异动检测工具
+
+检测当日市场异动信号：涨停/跌停、放量突破、大幅波动、板块异动。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `detect_abnormal(trade_date=None)` | 检测异动，返回结构化数据 |
+| `format_abnormal(trade_date=None)` | 格式化 Markdown 输出 |
+
+**检测类型**：
+
+| 类型 | 条件 |
+|------|------|
+| 涨停/跌停 | 主板>=9.9%，创业板/科创板>=19.9% |
+| 放量突破 | 量比>3 且 涨幅>3%（量比=当日成交量/20日均量） |
+| 大幅异动 | |涨跌幅|>7%，非涨跌停 |
+| 板块异动 | |板块平均涨跌幅|>3% |
+
+**运行方式**：
+
+```bash
+python tools/abnormal_detector.py
+python tools/abnormal_detector.py --trade_date 20260801
+```
+
+---
+
+#### tools/market_trend.py — 趋势研判工具
+
+基于近 N 日数据，综合多维度指标给出市场情绪判断（乐观/中性/悲观）。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `analyze_market_trend(days=5)` | 分析市场趋势，返回结构化数据 |
+| `format_market_trend(days=5)` | 格式化 Markdown 输出 |
+
+**评分维度（各 20 分，满分 100）**：
+
+| 维度 | 数据来源 | 逻辑 |
+|------|----------|------|
+| 涨跌比 | stock_kline 近5日 | 近5日平均上涨家数占比 |
+| 涨停跌停比 | stock_kline 最新日 | 涨停数/(涨停+跌停+1) |
+| 成交额趋势 | stock_kline 近5日 | 近5日 vs 前5日，放量/缩量 |
+| 板块轮动强度 | sector_industry_daily | 上涨板块数占比 |
+| 连续趋势 | stock_kline 近5日 | 连涨/连跌天数 |
+
+**情绪映射**：>=75乐观 / >=60中性偏多 / >=40中性 / >=25中性偏空 / <25悲观
+
+**运行方式**：
+
+```bash
+python tools/market_trend.py
+python tools/market_trend.py --days 10
+```
+
+---
+
+#### tools/watchlist_report.py — 自选股日报工具
+
+针对用户关注的股票，生成个性化日报：当日行情、近5日涨跌幅、相关新闻。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `get_watchlist_report(ts_codes, trade_date=None)` | 获取自选股日报结构化数据 |
+| `format_watchlist_report(ts_codes, trade_date=None)` | 格式化 Markdown 输出 |
+
+**数据内容**：
+
+| 模块 | 说明 |
+|------|------|
+| 当日行情 | 收盘价、涨跌幅、成交额 |
+| 近5日涨跌 | 近5个交易日累计涨跌幅 |
+| 相关新闻 | 按股票名称搜索新闻（每只最多3条） |
+
+**自选股配置**：编辑 `tools/watchlist_config.json` 设置默认自选股列表。
+
+**运行方式**：
+
+```bash
+python tools/watchlist_report.py --ts_codes 600519.SH,300750.SZ
+python tools/watchlist_report.py  # 使用 watchlist_config.json 中的默认列表
+```
+
+---
+
+#### tools/daily_digest.py — 日报生成工具（增强版）
+
+汇总六大模块生成完整每日市场简报。
+
+**核心函数**：
+
+| 函数 | 说明 |
+|------|------|
+| `generate_daily_digest(trade_date=None, watchlist=None)` | 生成完整日报（Markdown） |
+
+**日报结构**：
+
+| 序号 | 模块 | 数据来源 |
+|------|------|----------|
+| 一 | 大盘概览 | market_overview.py |
+| 二 | 趋势研判 | market_trend.py |
+| 三 | 板块轮动摘要 | sector_ranking.py + sector_rotation.py |
+| 四 | 市场异动 | abnormal_detector.py |
+| 五 | 重要新闻 | news_stock_linker.py |
+| 六 | 自选股日报（可选） | watchlist_report.py |
+
+**运行方式**：
+
+```bash
+python tools/daily_digest.py
+python tools/daily_digest.py --trade_date 20260801
+python tools/daily_digest.py --watchlist 600519.SH,300750.SZ
+```
+
+---
+
+### 5.11 工具函数与已有代码的对照
 
 | 现有 langgraph_getdata/ | 新 tools/ | 说明 |
 |---|---|---|
@@ -1344,8 +1500,13 @@ python agents/financial_agent.py
 | （无） | `news_stock_linker.py` | 新闻-行情关联（已完成） |
 | （无） | `financial_score.py` | 财务健康度评分（已完成） |
 | （无） | `sector_data.py` | 板块数据工具（已完成） |
+| （无） | `market_overview.py` | 大盘概览工具（已完成） |
+| （无） | `abnormal_detector.py` | 异动检测工具（已完成） |
+| （无） | `market_trend.py` | 趋势研判工具（已完成） |
+| （无） | `watchlist_report.py` | 自选股日报工具（已完成） |
+| （无） | `daily_digest.py` | 日报生成工具（已完成） |
 
-### 5.11 依赖安装
+### 5.12 依赖安装
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn

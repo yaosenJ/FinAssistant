@@ -333,9 +333,11 @@ Top 10:
 ```
 
 **To-Do**:
-- [ ] `tools/market_overview.py` — Market overview tool
-- [ ] `tools/abnormal_detector.py` — Anomaly detection tool
-- [ ] `tools/daily_digest.py` — Daily report generator
+- [x] `tools/market_overview.py` — Market overview tool (Done)
+- [x] `tools/abnormal_detector.py` — Anomaly detection tool (Done)
+- [x] `tools/market_trend.py` — Trend assessment tool (Done)
+- [x] `tools/watchlist_report.py` — Watchlist report tool (Done)
+- [x] `tools/daily_digest.py` — Daily report generator (Done, integrates all 6 modules)
 - [ ] `agents/daily_report_agent.py` — Daily report agent
 
 ---
@@ -1054,7 +1056,161 @@ python agents/financial_agent.py
 
 ---
 
-### 5.10 Tool Function Mapping
+### 5.10 Daily Market Report Tools
+
+#### tools/market_overview.py — Market Overview Tool
+
+Aggregates all market stock data to compute daily market overview (advance/decline counts, limit up/down, turnover, etc.).
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `get_market_overview(trade_date=None)` | Get market overview as structured data |
+| `format_market_overview(trade_date=None)` | Generate formatted Markdown output |
+
+**Output Metrics**:
+
+| Metric | Description |
+|--------|-------------|
+| Advance/Decline | Up/down/flat counts and percentages |
+| Limit Up/Down | Main board >=9.9%, ChiNext/STAR >=19.9% |
+| Total Turnover | Market-wide turnover (100M CNY) |
+| Avg/Median Change | Overall market change level |
+| Market Sentiment | Strong rally/Bullish/Neutral/Bearish/Weak decline |
+
+**Run**:
+
+```bash
+python tools/market_overview.py
+python tools/market_overview.py --trade_date 20260801
+```
+
+---
+
+#### tools/abnormal_detector.py — Anomaly Detection Tool
+
+Detects daily market anomalies: limit up/down stocks, volume breakouts, abnormal price movements, sector anomalies.
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `detect_abnormal(trade_date=None)` | Detect anomalies, return structured data |
+| `format_abnormal(trade_date=None)` | Generate formatted Markdown output |
+
+**Detection Types**:
+
+| Type | Condition |
+|------|-----------|
+| Limit Up/Down | Main board >=9.9%, ChiNext/STAR >=19.9% |
+| Volume Breakout | Volume ratio >3 AND gain >3% (ratio = current vol / 20-day avg vol) |
+| Price Surge | |Change| >7%, not limit up/down |
+| Sector Anomaly | |Sector avg change| >3% |
+
+**Run**:
+
+```bash
+python tools/abnormal_detector.py
+python tools/abnormal_detector.py --trade_date 20260801
+```
+
+---
+
+#### tools/market_trend.py — Trend Assessment Tool
+
+Multi-dimensional market sentiment analysis based on recent N-day data.
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `analyze_market_trend(days=5)` | Analyze market trend, return structured data |
+| `format_market_trend(days=5)` | Generate formatted Markdown output |
+
+**Scoring Dimensions (20 pts each, 100 total)**:
+
+| Dimension | Source | Logic |
+|-----------|--------|-------|
+| Advance/Decline Ratio | stock_kline 5-day | Average advancing stock ratio |
+| Limit Up/Down Ratio | stock_kline latest | Limit up / (up + down + 1) |
+| Turnover Trend | stock_kline 5-day | Recent 5d vs prior 5d, volume expansion/contraction |
+| Sector Rotation | sector_industry_daily | Advancing sector ratio |
+| Consecutive Trend | stock_kline 5-day | Consecutive up/down days |
+
+**Sentiment Mapping**: >=75 Optimistic / >=60 Mildly Bullish / >=40 Neutral / >=25 Mildly Bearish / <25 Pessimistic
+
+**Run**:
+
+```bash
+python tools/market_trend.py
+python tools/market_trend.py --days 10
+```
+
+---
+
+#### tools/watchlist_report.py — Watchlist Report Tool
+
+Personalized daily report for user-watched stocks: daily performance, 5-day change, related news.
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `get_watchlist_report(ts_codes, trade_date=None)` | Get watchlist report as structured data |
+| `format_watchlist_report(ts_codes, trade_date=None)` | Generate formatted Markdown output |
+
+**Report Content**:
+
+| Module | Description |
+|--------|-------------|
+| Daily Performance | Close price, change %, turnover |
+| 5-Day Change | Cumulative change over 5 trading days |
+| Related News | Search news by stock name (max 3 per stock) |
+
+**Watchlist Config**: Edit `tools/watchlist_config.json` to set default watchlist.
+
+**Run**:
+
+```bash
+python tools/watchlist_report.py --ts_codes 600519.SH,300750.SZ
+python tools/watchlist_report.py  # Use default from watchlist_config.json
+```
+
+---
+
+#### tools/daily_digest.py — Daily Report Generator (Enhanced)
+
+Generates complete daily market briefing by integrating all 6 modules.
+
+**Core Functions**:
+
+| Function | Description |
+|----------|-------------|
+| `generate_daily_digest(trade_date=None, watchlist=None)` | Generate complete daily report (Markdown) |
+
+**Report Structure**:
+
+| Section | Module | Source |
+|---------|--------|--------|
+| 1 | Market Overview | market_overview.py |
+| 2 | Trend Assessment | market_trend.py |
+| 3 | Sector Rotation | sector_ranking.py + sector_rotation.py |
+| 4 | Market Anomalies | abnormal_detector.py |
+| 5 | Important News | news_stock_linker.py |
+| 6 | Watchlist Report (optional) | watchlist_report.py |
+
+**Run**:
+
+```bash
+python tools/daily_digest.py
+python tools/daily_digest.py --trade_date 20260801
+python tools/daily_digest.py --watchlist 600519.SH,300750.SZ
+```
+
+---
+
+### 5.11 Tool Function Mapping
 
 | Existing langgraph_getdata/ | New tools/ | Description |
 |---|---|---|
@@ -1073,8 +1229,13 @@ python agents/financial_agent.py
 | (None) | `news_stock_linker.py` | News-stock correlation (Done) |
 | (None) | `financial_score.py` | Financial health scoring (Done) |
 | (None) | `sector_data.py` | Sector data utilities (Done) |
+| (None) | `market_overview.py` | Market overview tool (Done) |
+| (None) | `abnormal_detector.py` | Anomaly detection tool (Done) |
+| (None) | `market_trend.py` | Trend assessment tool (Done) |
+| (None) | `watchlist_report.py` | Watchlist report tool (Done) |
+| (None) | `daily_digest.py` | Daily report generator (Done) |
 
-### 5.11 Dependencies
+### 5.12 Dependencies
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn
