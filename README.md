@@ -338,7 +338,7 @@ Top 10:
 - [x] `tools/market_trend.py` — Trend assessment tool (Done)
 - [x] `tools/watchlist_report.py` — Watchlist report tool (Done)
 - [x] `tools/daily_digest.py` — Daily report generator (Done, integrates all 6 modules)
-- [ ] `agents/daily_report_agent.py` — Daily report agent
+- [x] `agents/daily_report_agent.py` — Daily report agent (Done)
 
 ---
 
@@ -1056,7 +1056,44 @@ python agents/financial_agent.py
 
 ---
 
-### 5.10 Daily Market Report Tools
+### 5.10 Daily Market Report Agent
+
+#### agents/daily_report_agent.py — Daily Market Report Agent
+
+Integrates market overview, trend assessment, sector rotation, anomaly detection, news correlation, and watchlist report tool groups for natural language Q&A on daily market briefings.
+
+**Tool Group Structure**:
+
+| Tool Group | Tools | Description |
+|------------|-------|-------------|
+| market-overview | `get_market_overview` / `format_market_overview` | Market overview |
+| market-trend | `analyze_market_trend` / `format_market_trend` | Trend assessment |
+| sector-analysis | `get_sector_ranking` / `get_sector_rotation` / `get_hot_cold_sectors` etc. (8 tools) | Sector analysis |
+| abnormal-detection | `detect_abnormal` / `format_abnormal` | Anomaly detection |
+| news | `find_news_by_keyword` / `search_news_with_market` | News search |
+| watchlist | `get_watchlist_report` / `format_watchlist_report` | Watchlist report |
+| daily-digest | `generate_daily_digest` | One-click daily report |
+
+**Example Queries**:
+
+```
+"Generate today's market morning briefing"
+"Which stocks hit limit up today? Which sectors do they belong to?"
+"How has market sentiment been this week?"
+"Which sectors are seeing capital inflow?"
+"What important news is there today?"
+"How are my watchlist stocks performing?"
+```
+
+**Run**:
+
+```bash
+python agents/daily_report_agent.py
+```
+
+---
+
+### 5.11 Daily Market Report Tools
 
 #### tools/market_overview.py — Market Overview Tool
 
@@ -1210,7 +1247,7 @@ python tools/daily_digest.py --watchlist 600519.SH,300750.SZ
 
 ---
 
-### 5.11 Tool Function Mapping
+### 5.12 Tool Function Mapping
 
 | Existing langgraph_getdata/ | New tools/ | Description |
 |---|---|---|
@@ -1235,7 +1272,7 @@ python tools/daily_digest.py --watchlist 600519.SH,300750.SZ
 | (None) | `watchlist_report.py` | Watchlist report tool (Done) |
 | (None) | `daily_digest.py` | Daily report generator (Done) |
 
-### 5.12 Dependencies
+### 5.13 Dependencies
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn

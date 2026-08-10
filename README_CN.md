@@ -340,7 +340,7 @@ Top 10:
 - [x] `tools/market_trend.py` — 趋势研判工具（已完成）
 - [x] `tools/watchlist_report.py` — 自选股日报工具（已完成）
 - [x] `tools/daily_digest.py` — 日报生成工具（已完成，整合全部6大模块）
-- [ ] `agents/daily_report_agent.py` — 日报 Agent 编排
+- [x] `agents/daily_report_agent.py` — 日报 Agent 编排（已完成）
 
 ---
 
@@ -1327,7 +1327,44 @@ python agents/financial_agent.py
 
 ---
 
-### 5.10 市场日报工具集
+### 5.10 市场日报智能体
+
+#### agents/daily_report_agent.py — 市场日报智能体
+
+整合大盘概览、趋势研判、板块轮动、异动检测、新闻关联、自选股日报等七大工具组，支持市场日报/晨会简报的自然语言问答。
+
+**工具组划分**：
+
+| 工具组 | 工具 | 说明 |
+|--------|------|------|
+| market-overview | `get_market_overview` / `format_market_overview` | 大盘概览 |
+| market-trend | `analyze_market_trend` / `format_market_trend` | 趋势研判 |
+| sector-analysis | `get_sector_ranking` / `get_sector_rotation` / `get_hot_cold_sectors` 等8个 | 板块分析 |
+| abnormal-detection | `detect_abnormal` / `format_abnormal` | 异动检测 |
+| news | `find_news_by_keyword` / `search_news_with_market` | 新闻搜索 |
+| watchlist | `get_watchlist_report` / `format_watchlist_report` | 自选股日报 |
+| daily-digest | `generate_daily_digest` | 一键日报 |
+
+**可回答的问题**：
+
+```
+"帮我生成今天的市场晨会简报"
+"今天有哪些股票涨停？分别属于什么板块？"
+"最近一周市场情绪怎么样？"
+"哪些板块资金在流入？"
+"今天有什么重要新闻？"
+"我的自选股今天表现如何？"
+```
+
+**运行方式**：
+
+```bash
+python agents/daily_report_agent.py
+```
+
+---
+
+### 5.11 市场日报工具集
 
 #### tools/market_overview.py — 大盘概览工具
 
@@ -1481,7 +1518,7 @@ python tools/daily_digest.py --watchlist 600519.SH,300750.SZ
 
 ---
 
-### 5.11 工具函数与已有代码的对照
+### 5.12 工具函数与已有代码的对照
 
 | 现有 langgraph_getdata/ | 新 tools/ | 说明 |
 |---|---|---|
@@ -1506,7 +1543,7 @@ python tools/daily_digest.py --watchlist 600519.SH,300750.SZ
 | （无） | `watchlist_report.py` | 自选股日报工具（已完成） |
 | （无） | `daily_digest.py` | 日报生成工具（已完成） |
 
-### 5.12 依赖安装
+### 5.13 依赖安装
 
 ```bash
 pip install agentscope>=2.0.3 fastapi uvicorn
